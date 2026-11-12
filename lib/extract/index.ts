@@ -90,9 +90,10 @@ export async function extractFromBuffer(
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
   try {
-    // pdf-parse works in memory — no disk I/O per P1
+    // Use lib path directly — pdf-parse index.js runs a self-test on require() that
+    // looks for ./test/data/05-versions-space.pdf and fails in production environments
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>
+    const pdfParse = require('pdf-parse/lib/pdf-parse.js') as (buf: Buffer) => Promise<{ text: string }>
     const data = await pdfParse(buffer)
     return data.text
   } catch (err) {
