@@ -4,6 +4,7 @@
  */
 import { parseCsv } from './parse-csv'
 import { classifyTransactions } from './classify'
+import { checkIntegrity } from './integrity'
 import { ExtractionResult, MAX_FILE_SIZE_BYTES } from './schema'
 
 export type { ExtractionResult, Transaction } from './schema'
@@ -69,6 +70,7 @@ export async function extractFromBuffer(
     )
   }
 
+  const integrityFlags = checkIntegrity(rawRows)
   const transactions = await classifyTransactions(rawRows)
   const currency = transactions[0]?.currency ?? 'USD'
 
@@ -82,6 +84,7 @@ export async function extractFromBuffer(
     periodStart,
     periodEnd,
     source: ext === 'pdf' ? 'pdf' : 'csv',
+    integrityFlags,
   })
 }
 

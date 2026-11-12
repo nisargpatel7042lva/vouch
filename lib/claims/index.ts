@@ -247,18 +247,24 @@ export function claimRunwayFloor(
 export function computeClaim(
   txns: Transaction[],
   claimType: ClaimType,
-  params: ClaimParams
+  params: ClaimParams,
+  integrityFlags: string[] = []
 ): Disclosure {
+  let disclosure: Disclosure
   switch (claimType) {
     case 'income_floor':
-      return claimIncomeFloor(txns, params as IncomeFloorParams)
+      disclosure = claimIncomeFloor(txns, params as IncomeFloorParams)
+      break
     case 'balance_floor':
-      return claimBalanceFloor(txns, params as BalanceFloorParams)
+      disclosure = claimBalanceFloor(txns, params as BalanceFloorParams)
+      break
     case 'runway_floor':
-      return claimRunwayFloor(txns, params as RunwayFloorParams)
+      disclosure = claimRunwayFloor(txns, params as RunwayFloorParams)
+      break
     default:
       throw new ClaimError(`Unknown claim type: ${claimType}`, 'UNKNOWN_CLAIM')
   }
+  return { ...disclosure, integrityFlags: [...disclosure.integrityFlags, ...integrityFlags] }
 }
 
 // ─── Disclosure safety check (used in tests) ─────────────────────────────────

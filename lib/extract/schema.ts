@@ -25,6 +25,7 @@ export const ExtractionResult = z.object({
   periodStart: z.string(),
   periodEnd: z.string(),
   source: z.enum(['csv', 'pdf']),
+  integrityFlags: z.array(z.string()).default([]),
 })
 export type ExtractionResult = z.infer<typeof ExtractionResult>
 

@@ -46,7 +46,12 @@ export async function POST(req: NextRequest) {
     const extraction = await extractFromBuffer(buffer, file.name)
 
     // Compute claim (deterministic, P4)
-    const disclosure = computeClaim(extraction.transactions, claimType as ClaimType, params)
+    const disclosure = computeClaim(
+      extraction.transactions,
+      claimType as ClaimType,
+      params,
+      extraction.integrityFlags
+    )
 
     // Attest (live NEAR AI Cloud call)
     const nonce = generateNonce()
