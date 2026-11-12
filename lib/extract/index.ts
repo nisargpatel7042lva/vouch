@@ -3,6 +3,7 @@
  * P1: accepts Buffer/string in memory only — nothing written to disk or logged.
  */
 import { parseCsv } from './parse-csv'
+import { parsePdfLines } from './parse-pdf'
 import { classifyTransactions } from './classify'
 import { checkIntegrity } from './integrity'
 import { ExtractionResult, MAX_FILE_SIZE_BYTES } from './schema'
@@ -52,11 +53,16 @@ export async function extractFromBuffer(
     throw new ExtractionError('File appears to be empty or unreadable', 'EMPTY_FILE')
   }
 
-  const rawRows = parseCsv(textContent)
+  let rawRows = parseCsv(textContent)
+
+  // CSV parser finds nothing on PDF-extracted plain text — try line-pattern parser
+  if (rawRows.length === 0 && ext === 'pdf') {
+    rawRows = parsePdfLines(textContent)
+  }
 
   if (rawRows.length === 0) {
     throw new ExtractionError(
-      'No transactions found. Check that the file is a valid bank statement.',
+      'No transactions found. The file may be a scanned image PDF (not machine-readable), or the format is unsupported. Try exporting a CSV from your bank instead.',
       'PARSE_ERROR'
     )
   }
