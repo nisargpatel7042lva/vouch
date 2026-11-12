@@ -9,6 +9,7 @@ export default function Home() {
         <div className="max-w-5xl mx-auto flex justify-between items-center">
           <Link href="/" className="font-bold text-gray-900 text-lg tracking-tight">Vouch</Link>
           <div className="flex gap-6 text-sm font-medium text-gray-600">
+            <Link href="/audit" className="hover:text-gray-900 transition-colors">Expense audit</Link>
             <Link href="/prove" className="hover:text-gray-900 transition-colors">Create proof</Link>
             <Link href="/my-proofs" className="hover:text-gray-900 transition-colors">My proofs</Link>
           </div>
