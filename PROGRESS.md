@@ -8,8 +8,8 @@ Hackathon: NEAR Hackathon · Deadline: 14 Nov 2026, 23:59 UTC
 |-------|-------------|--------|------|
 | 0 | Foundation + live attestation spike | PASSED | 2026-11-12 |
 | 1 | Statement ingestion and extraction | PASSED | 2026-11-12 |
-| 2 | Deterministic claim engine | IN PROGRESS | 2026-11-12 |
-| 3 | Proof records and links | PENDING | |
+| 2 | Deterministic claim engine | PASSED | 2026-11-12 |
+| 3 | Proof records and links | IN PROGRESS | 2026-11-12 |
 | 4 | Verifier page | PENDING | |
 | 5 | Prover flow | PENDING | |
 | 6 | Hardening and red team | PENDING | |
