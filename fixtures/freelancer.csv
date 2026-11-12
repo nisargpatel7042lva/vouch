@@ -1,0 +1,39 @@
+Date,Description,Amount,Currency,Balance
+2026-07-02,Client Payment - Designr Co Invoice #2201,2800.00,USD,5300.00
+2026-07-04,AWS Cloud Services,-156.42,USD,5143.58
+2026-07-06,Figma Subscription,-45.00,USD,5098.58
+2026-07-09,Client Payment - TechNova Invoice #118,1500.00,USD,6598.58
+2026-07-11,Grocery Store - Whole Foods,-112.30,USD,6486.28
+2026-07-13,Transfer from Business Account,500.00,USD,6986.28
+2026-07-15,Co-working Space - WeWork,-350.00,USD,6636.28
+2026-07-17,Client Refund - Invoice #119 Overpayment,200.00,USD,6836.28
+2026-07-20,Electricity Bill,-98.00,USD,6738.28
+2026-07-22,Phone & Internet - Combined,-130.00,USD,6608.28
+2026-07-25,Client Payment - Innovatech Invoice #301,3200.00,USD,9808.28
+2026-07-28,Accounting Software - QuickBooks,-30.00,USD,9778.28
+2026-07-30,Restaurant Dinner,-78.50,USD,9699.78
+2026-08-01,Transfer to Business Savings,-1000.00,USD,8699.78
+2026-08-03,Client Payment - Greenleaf Solutions Invoice #420,2400.00,USD,11099.78
+2026-08-06,AWS Cloud Services,-187.33,USD,10912.45
+2026-08-08,Grocery Store - Whole Foods,-98.44,USD,10814.01
+2026-08-10,Co-working Space - WeWork,-350.00,USD,10464.01
+2026-08-12,Figma Subscription,-45.00,USD,10419.01
+2026-08-15,Client Payment - Designr Co Invoice #2305,3500.00,USD,13919.01
+2026-08-18,Electricity Bill,-102.50,USD,13816.51
+2026-08-20,Phone & Internet - Combined,-130.00,USD,13686.51
+2026-08-22,Grocery Store - Whole Foods,-87.20,USD,13599.31
+2026-08-25,Transfer to Business Savings,-1500.00,USD,12099.31
+2026-08-28,Client Payment - TechNova Invoice #145,1800.00,USD,13899.31
+2026-08-30,Accounting Software - QuickBooks,-30.00,USD,13869.31
+2026-09-02,Client Payment - Innovatech Invoice #334,4100.00,USD,17969.31
+2026-09-04,AWS Cloud Services,-201.10,USD,17768.21
+2026-09-06,Grocery Store - Whole Foods,-115.60,USD,17652.61
+2026-09-09,Co-working Space - WeWork,-350.00,USD,17302.61
+2026-09-11,Figma Subscription,-45.00,USD,17257.61
+2026-09-14,Phone & Internet - Combined,-130.00,USD,17127.61
+2026-09-16,Electricity Bill,-95.00,USD,17032.61
+2026-09-18,Transfer to Business Savings,-2000.00,USD,15032.61
+2026-09-20,Partial Refund - Cancelled Tool Subscription,45.00,USD,15077.61
+2026-09-24,Client Payment - Greenleaf Solutions Invoice #450,2900.00,USD,17977.61
+2026-09-27,Accounting Software - QuickBooks,-30.00,USD,17947.61
+2026-09-28,Restaurant Client Lunch,-145.00,USD,17802.61

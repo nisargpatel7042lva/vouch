@@ -1,0 +1,39 @@
+Date,Description,Amount,Currency,Balance
+2026-07-01,Opening Balance,,USD,8500.00
+2026-07-01,Salary - Acme Corp Ltd,4200.00,USD,12700.00
+2026-07-03,Rent Payment - Sunrise Apartments,-1500.00,USD,11200.00
+2026-07-05,Grocery Store - FreshMart,-87.43,USD,11112.57
+2026-07-08,Electric Bill - City Power,-124.00,USD,10988.57
+2026-07-10,Netflix Subscription,-15.99,USD,10972.58
+2026-07-12,Coffee Shop - Brewed Awakening,-6.50,USD,10966.08
+2026-07-15,Transfer to Savings Account,-500.00,USD,10466.08
+2026-07-18,Gym Membership - FitLife,-45.00,USD,10421.08
+2026-07-20,Pharmacy CVS,-32.10,USD,10388.98
+2026-07-22,Restaurant - The Golden Fork,-67.80,USD,10321.18
+2026-07-25,Phone Bill - Verizon,-89.00,USD,10232.18
+2026-07-28,Amazon Purchase,-134.56,USD,10097.62
+2026-07-30,Internet Service - Comcast,-79.99,USD,10017.63
+2026-08-01,Salary - Acme Corp Ltd,4200.00,USD,14217.63
+2026-08-02,Rent Payment - Sunrise Apartments,-1500.00,USD,12717.63
+2026-08-04,Grocery Store - FreshMart,-94.21,USD,12623.42
+2026-08-07,Electric Bill - City Power,-118.50,USD,12504.92
+2026-08-09,Uber Ride,-18.40,USD,12486.52
+2026-08-11,Coffee Shop - Brewed Awakening,-7.20,USD,12479.32
+2026-08-14,Transfer to Savings Account,-500.00,USD,11979.32
+2026-08-16,Doctor Visit Copay,-40.00,USD,11939.32
+2026-08-20,Netflix Subscription,-15.99,USD,11923.33
+2026-08-22,Grocery Store - FreshMart,-76.44,USD,11846.89
+2026-08-25,Phone Bill - Verizon,-89.00,USD,11757.89
+2026-08-28,Restaurant - Pasta Palace,-52.30,USD,11705.59
+2026-08-30,Internet Service - Comcast,-79.99,USD,11625.60
+2026-09-01,Salary - Acme Corp Ltd,4200.00,USD,15825.60
+2026-09-03,Rent Payment - Sunrise Apartments,-1500.00,USD,14325.60
+2026-09-05,Grocery Store - FreshMart,-102.33,USD,14223.27
+2026-09-08,Electric Bill - City Power,-131.00,USD,14092.27
+2026-09-10,Netflix Subscription,-15.99,USD,14076.28
+2026-09-12,Refund - Amazon Return,134.56,USD,14210.84
+2026-09-15,Transfer to Savings Account,-500.00,USD,13710.84
+2026-09-18,Gym Membership - FitLife,-45.00,USD,13665.84
+2026-09-22,Coffee Shop - Brewed Awakening,-8.10,USD,13657.74
+2026-09-25,Phone Bill - Verizon,-89.00,USD,13568.74
+2026-09-28,Internet Service - Comcast,-79.99,USD,13488.75

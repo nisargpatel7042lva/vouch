@@ -1,0 +1,42 @@
+Date,Description,Amount,Currency,Balance
+2026-07-01,Opening Balance - Fiat Account,,USD,12000.00
+2026-07-02,Salary - BlockBuilders Inc,5500.00,USD,17500.00
+2026-07-03,Transfer to Coinbase - BTC Purchase,-2000.00,USD,15500.00
+2026-07-05,Grocery Store - Trader Joes,-89.50,USD,15410.50
+2026-07-07,Transfer from Coinbase - ETH Sale,1800.00,USD,17210.50
+2026-07-09,Crypto Staking Reward - ETH2,320.00,USD,17530.50
+2026-07-11,Rent - Metropolitan Apartments,-2200.00,USD,15330.50
+2026-07-14,Transfer to Kraken - Deposit,-500.00,USD,14830.50
+2026-07-16,Gym Membership,-50.00,USD,14780.50
+2026-07-18,Transfer from Kraken - Withdrawal,750.00,USD,15530.50
+2026-07-20,Pharmacy,-28.40,USD,15502.10
+2026-07-22,Transfer to Hardware Wallet - Cold Storage,-3000.00,USD,12502.10
+2026-07-25,Electricity Bill,-145.00,USD,12357.10
+2026-07-28,Phone Bill,-95.00,USD,12262.10
+2026-07-30,Transfer to Coinbase - ETH Purchase,-800.00,USD,11462.10
+2026-08-01,Salary - BlockBuilders Inc,5500.00,USD,16962.10
+2026-08-03,Transfer from Hardware Wallet,1200.00,USD,18162.10
+2026-08-05,Grocery Store - Trader Joes,-102.30,USD,18059.80
+2026-08-07,Transfer to Kraken - Deposit,-400.00,USD,17659.80
+2026-08-09,Crypto Staking Reward - ETH2,290.00,USD,17949.80
+2026-08-11,Rent - Metropolitan Apartments,-2200.00,USD,15749.80
+2026-08-13,Restaurant Dinner,-67.00,USD,15682.80
+2026-08-15,Transfer from Coinbase - BTC Sale,2500.00,USD,18182.80
+2026-08-18,Electricity Bill,-138.00,USD,18044.80
+2026-08-20,Transfer to Kraken - Withdrawal,0.00,USD,18044.80
+2026-08-22,Phone Bill,-95.00,USD,17949.80
+2026-08-25,Transfer to Cold Storage Wallet,-5000.00,USD,12949.80
+2026-08-28,Grocery Store - Trader Joes,-78.90,USD,12870.90
+2026-08-30,Crypto Staking Reward - ETH2,275.00,USD,13145.90
+2026-09-01,Salary - BlockBuilders Inc,5500.00,USD,18645.90
+2026-09-03,Transfer to Coinbase - ETH Purchase,-1500.00,USD,17145.90
+2026-09-05,Grocery Store - Trader Joes,-95.60,USD,17050.30
+2026-09-08,Rent - Metropolitan Apartments,-2200.00,USD,14850.30
+2026-09-10,Transfer from Cold Storage Wallet,2000.00,USD,16850.30
+2026-09-12,Electricity Bill,-152.00,USD,16698.30
+2026-09-15,Phone Bill,-95.00,USD,16603.30
+2026-09-17,Crypto Staking Reward - ETH2,310.00,USD,16913.30
+2026-09-20,Transfer to Coinbase - BTC Purchase,-800.00,USD,16113.30
+2026-09-22,Restaurant Dinner,-55.00,USD,16058.30
+2026-09-25,Transfer from Kraken - Withdrawal,600.00,USD,16658.30
+2026-09-28,Grocery Store - Trader Joes,-88.20,USD,16570.10
