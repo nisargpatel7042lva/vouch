@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Link from 'next/link'
 
 type ClaimType = 'income_floor' | 'balance_floor' | 'runway_floor'
 type Step = 'upload' | 'claim' | 'processing' | 'result' | 'error'
@@ -14,6 +15,8 @@ interface ProofResult {
   id: string
   verdict: boolean
   revokeToken: string
+  periodStart?: string
+  periodEnd?: string
 }
 
 interface SavedProof {
@@ -22,6 +25,8 @@ interface SavedProof {
   verdict: boolean
   revokeToken: string
   createdAt: string
+  periodStart?: string
+  periodEnd?: string
 }
 
 const STORAGE_KEY = 'vouch_my_proofs'
@@ -163,6 +168,8 @@ export default function ProveClient() {
         verdict: data.verdict,
         revokeToken: data.revokeToken,
         createdAt: new Date().toISOString(),
+        periodStart: data.periodStart,
+        periodEnd: data.periodEnd,
       }
       persistProof(saved)
       setMyProofs(loadSavedProofs())
@@ -300,8 +307,11 @@ export default function ProveClient() {
             </section>
           )}
 
-          <div className="text-center">
-            <button onClick={reset} className="text-sm text-gray-500 hover:text-gray-700 underline">
+          <div className="flex justify-center gap-6 text-sm">
+            <Link href="/my-proofs" className="text-blue-600 hover:text-blue-700 font-medium">
+              View all my proofs →
+            </Link>
+            <button onClick={reset} className="text-gray-500 hover:text-gray-700 underline">
               Create another proof
             </button>
           </div>
@@ -313,6 +323,16 @@ export default function ProveClient() {
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
+        <div className="text-sm text-gray-500 flex justify-between items-center">
+          <div>
+            <Link href="/" className="hover:text-gray-700 transition-colors">Vouch</Link>
+            <span className="mx-2">›</span>
+            <span>Create proof</span>
+          </div>
+          <Link href="/my-proofs" className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+            My proofs →
+          </Link>
+        </div>
         <header className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">Create a proof</h1>
           <p className="mt-2 text-gray-600">Upload a bank statement and choose what to prove.</p>
