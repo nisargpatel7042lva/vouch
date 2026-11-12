@@ -9,7 +9,7 @@ test.describe('landing page', () => {
     await page.goto(BASE)
     await expect(page.getByRole('heading', { name: /Share the proof/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /Create a Proof/i })).toBeVisible()
-    await expect(page.getByText(/NEAR AI Cloud TEE/i).first()).toBeVisible()
+    await expect(page.getByText(/NEAR AI Cloud/i).first()).toBeVisible()
   })
 
   test('Create a Proof navigates to /prove', async ({ page }) => {
@@ -139,7 +139,7 @@ test.describe('prover page – my proofs panel', () => {
 
     // My proofs appears on result page
     await expect(page.getByRole('region', { name: /My proofs/i })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'View' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'View', exact: true }).first()).toBeVisible()
   })
 })
 

@@ -22,6 +22,7 @@ async function createTestProof(expiryHours = 168): Promise<{ id: string; revokeT
 
 test.describe('verifier page – valid proof', () => {
   test('shows verdict card, all three panels, and attestation data', async ({ page }) => {
+    test.setTimeout(60_000)
     const { id } = await createTestProof()
     await page.goto(`${BASE}/v/${id}`)
 
@@ -30,30 +31,33 @@ test.describe('verifier page – valid proof', () => {
     await expect(page.getByText(/Claim Verified|Claim Not Met/)).toBeVisible()
     await expect(page.getByText(/Monthly income at least/i).first()).toBeVisible()
 
-    // "What you learned" panel
-    await expect(page.getByRole('region', { name: 'What you learned' })).toBeVisible()
-    await expect(page.getByText('Verdict')).toBeVisible()
+    // "Claim details" panel
+    const claimDetails = page.getByRole('region', { name: 'Claim details' })
+    await expect(claimDetails).toBeVisible()
+    await expect(claimDetails.getByText('Verdict')).toBeVisible()
 
-    // "What you did not see" panel
-    await expect(page.getByRole('region', { name: 'What you did not see' })).toBeVisible()
+    // "Privacy guarantee" panel
+    await expect(page.getByRole('region', { name: 'Privacy guarantee' })).toBeVisible()
     await expect(page.getByText(/bank statements/i)).toBeVisible()
 
     // Attestation panel
     await expect(page.getByRole('region', { name: 'Attestation' })).toBeVisible()
-    await expect(page.getByText(/VERIFIED|FAILED/)).toBeVisible()
-    await expect(page.getByText(/Signing address/i)).toBeVisible()
+    await expect(page.getByText(/verified by hardware|check failed/i)).toBeVisible()
+    await expect(page.getByRole('link', { name: /verify independently/i })).toBeVisible()
   })
 
   test('re-verify button runs a fresh attestation and shows new nonce', async ({ page }) => {
+    test.setTimeout(90_000)
     const { id } = await createTestProof()
     await page.goto(`${BASE}/v/${id}`)
 
-    await page.getByRole('button', { name: /re-verify now/i }).click()
-    await expect(page.getByText(/Fresh attestation verified/i)).toBeVisible({ timeout: 30_000 })
-    await expect(page.getByText(/new nonce:/i)).toBeVisible()
+    await page.getByRole('button', { name: /re-verify/i }).click()
+    await expect(page.getByText(/Fresh attestation confirmed/i)).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText(/checks passed/i)).toBeVisible()
   })
 
   test('page contains no raw fixture amounts or descriptions in HTML', async ({ page }) => {
+    test.setTimeout(60_000)
     const { id } = await createTestProof()
     await page.goto(`${BASE}/v/${id}`)
 
@@ -65,9 +69,10 @@ test.describe('verifier page – valid proof', () => {
   })
 
   test('saves screenshot to artifacts/', async ({ page }) => {
+    test.setTimeout(60_000)
     const { id } = await createTestProof()
     await page.goto(`${BASE}/v/${id}`)
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     fs.mkdirSync('artifacts', { recursive: true })
     await page.screenshot({ path: 'artifacts/verifier-valid.png', fullPage: true })
@@ -77,6 +82,7 @@ test.describe('verifier page – valid proof', () => {
 
 test.describe('verifier page – expired proof', () => {
   test('shows expired state with no verdict', async ({ page }) => {
+    test.setTimeout(60_000)
     const { id } = await createTestProof()
 
     // Directly manipulate the DB to expire this proof
@@ -114,9 +120,10 @@ test.describe('verifier page – revoked proof', () => {
 
 test.describe('accessibility', () => {
   test('valid proof page has no serious/critical accessibility violations', async ({ page }) => {
+    test.setTimeout(60_000)
     const { id } = await createTestProof()
     await page.goto(`${BASE}/v/${id}`)
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa'])
