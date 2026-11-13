@@ -1,3 +1,5 @@
+export const maxDuration = 60
+
 /**
  * POST /api/audit
  * Ephemeral expense audit — extracts, classifies, attests, returns report.
