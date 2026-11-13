@@ -257,6 +257,36 @@ export default function VerifierClient({ id, initialData, initialStatus }: Verif
             </dl>
           </section>
 
+          {/* Integrity flags — only shown when present */}
+          {proof.disclosure.integrityFlags && proof.disclosure.integrityFlags.length > 0 && (
+            <section aria-label="Document integrity" style={{ ...gc, padding: '22px', borderLeft: '3px solid rgba(234,179,8,.5)' }}>
+              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#92400e', marginBottom: 12 }}>
+                Document integrity notes
+              </p>
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }} role="list">
+                {proof.disclosure.integrityFlags.map((flag: string) => {
+                  const labels: Record<string, string> = {
+                    balance_discontinuity: 'Running balance did not reconcile at one or more points — data may have been partially altered',
+                    date_order_violation: 'Transactions were not in strict date order — statement may have been re-sorted',
+                    duplicate_rows: 'Exact duplicate rows detected — may indicate copy-paste or file corruption',
+                    round_amount_bias: 'Over 80% of amounts are round numbers — possible manual entry rather than exported data',
+                  }
+                  return (
+                    <li key={flag} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                      <span style={{ color: '#d97706', flexShrink: 0, marginTop: 1 }}>⚠</span>
+                      <span style={{ fontSize: 13, color: '#78350f', lineHeight: 1.45 }}>
+                        {labels[flag] ?? flag.replace(/_/g, ' ')}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+              <p style={{ fontSize: 11.5, color: '#92400e', marginTop: 10, lineHeight: 1.5 }}>
+                These notes do not change the verdict — they are recorded so verifiers can make an informed decision.
+              </p>
+            </section>
+          )}
+
           {/* Privacy guarantee */}
           <section aria-label="Privacy guarantee" style={{ ...gc, padding: '22px' }}>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-2)', marginBottom: 16 }}>What was not shared</p>

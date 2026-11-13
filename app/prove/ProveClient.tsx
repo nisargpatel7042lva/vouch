@@ -16,7 +16,7 @@ interface BalanceParams { minBalance: number; windowDays: number; currency: stri
 interface RunwayParams { minMonths: number; windowDays: number; currency: string }
 type ClaimParams = IncomeParams | BalanceParams | RunwayParams
 
-interface ProofResult { id: string; verdict: boolean; revokeToken: string; periodStart?: string; periodEnd?: string }
+interface ProofResult { id: string; verdict: boolean; revokeToken: string; periodStart?: string; periodEnd?: string; expiresAt?: string }
 interface SavedProof { id: string; claimType: ClaimType; verdict: boolean; revokeToken: string; createdAt: string; periodStart?: string; periodEnd?: string }
 
 const STORAGE_KEY = 'vouch_my_proofs'
@@ -250,6 +250,11 @@ export default function ProveClient() {
                 {copied ? <><Check size={12} />Copied</> : <><Copy size={12} />Copy link</>}
               </button>
             </div>
+            {result.expiresAt && (
+              <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 8 }}>
+                Link expires <strong style={{ color: 'var(--ink)' }}>{new Date(result.expiresAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</strong>
+              </p>
+            )}
           </section>
 
           {/* Revoke token */}
