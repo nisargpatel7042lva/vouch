@@ -11,7 +11,11 @@ let _db: Database.Database | null = null
 let _dbPath: string | null = null
 
 export function getDb(): Database.Database {
-  const dbPath = process.env.VOUCH_DB_PATH ?? path.join(process.cwd(), 'vouch.db')
+  // Vercel serverless: cwd is read-only; /tmp is the only writable partition
+  const defaultPath = process.env.VERCEL
+    ? '/tmp/vouch.db'
+    : path.join(process.cwd(), 'vouch.db')
+  const dbPath = process.env.VOUCH_DB_PATH ?? defaultPath
   // Re-open if path changed (test isolation)
   if (_db && _dbPath !== dbPath) {
     _db.close()
