@@ -6,8 +6,6 @@ export const maxDuration = 60
  * Nothing is persisted after this handler returns (P1, P2).
  */
 import { NextRequest, NextResponse } from 'next/server'
-
-export const maxDuration = 60
 import { extractFromBuffer } from '@/lib/extract/index'
 import { generateNonce, fetchAndVerifyAttestation } from '@/lib/near/attest'
 import { buildAuditReport } from '@/lib/audit/index'
