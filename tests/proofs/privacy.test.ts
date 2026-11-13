@@ -61,12 +61,12 @@ function makeAttestation(): AttestationResult {
 }
 
 describe('P2: DB scan for raw transaction data', () => {
-  it('SQLite DB does not contain fixture sentinel strings after proof creation', () => {
+  it('SQLite DB does not contain fixture sentinel strings after proof creation', async () => {
     const disclosure = makeDisclosureWithSentinels()
     const attestation = makeAttestation()
 
-    const { proof } = createProof(disclosure, attestation)
-    expect(getProof(proof.id)).not.toBeNull()
+    const { proof } = await createProof(disclosure, attestation)
+    expect(await getProof(proof.id)).not.toBeNull()
     closeDb()
 
     // Read the raw DB file as text (SQLite stores text as UTF-8)
@@ -80,9 +80,9 @@ describe('P2: DB scan for raw transaction data', () => {
     }
   })
 
-  it('proof record does not expose raw transaction descriptions', () => {
-    const { proof } = createProof(makeDisclosureWithSentinels(), makeAttestation())
-    const record = getProof(proof.id)!
+  it('proof record does not expose raw transaction descriptions', async () => {
+    const { proof } = await createProof(makeDisclosureWithSentinels(), makeAttestation())
+    const record = (await getProof(proof.id))!
 
     const recordStr = JSON.stringify(record)
     for (const sentinel of SENTINELS) {
@@ -95,8 +95,8 @@ describe('P2: DB scan for raw transaction data', () => {
 })
 
 describe('P2: revoke token is stored only as hash', () => {
-  it('revokeToken does not appear in DB after creation', () => {
-    const { revokeToken } = createProof(makeDisclosureWithSentinels(), makeAttestation())
+  it('revokeToken does not appear in DB after creation', async () => {
+    const { revokeToken } = await createProof(makeDisclosureWithSentinels(), makeAttestation())
     closeDb()
 
     const dbContent = fs.readFileSync(TEST_DB, 'utf-8').replace(/\0/g, ' ')

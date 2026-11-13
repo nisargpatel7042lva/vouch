@@ -8,13 +8,33 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        tight: ['var(--font-inter-tight)', 'Inter Tight', 'system-ui', 'sans-serif'],
+      },
       colors: {
-        brand: {
-          50: '#f0fdf4',
-          500: '#22c55e',
-          600: '#16a34a',
-          900: '#14532d',
+        cream: {
+          DEFAULT: '#f0ebe0',
+          50: '#faf7f2',
+          100: '#f4ede0',
+          200: '#e8e1d6',
+          300: '#d9d0c3',
         },
+        ink: {
+          DEFAULT: '#14100b',
+          2: '#58483e',
+          3: '#8a7568',
+        },
+        vouch: {
+          blue: '#1448e8',
+          green: '#0a9e72',
+          amber: '#c8900d',
+          red: '#dc2626',
+        },
+      },
+      borderRadius: {
+        '2xl': '16px',
+        '3xl': '24px',
+        '4xl': '32px',
       },
     },
   },

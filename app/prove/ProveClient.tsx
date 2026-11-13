@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import AppNav from '@/app/components/AppNav'
+import {
+  ShieldCheck, UploadCloud, FileText, CheckCircle, XCircle,
+  ArrowRight, Copy, Check, X, TrendingUp, CreditCard, CalendarRange, LisLoader,
+} from '@/app/components/icons'
 
 type ClaimType = 'income_floor' | 'balance_floor' | 'runway_floor'
 type Step = 'upload' | 'claim' | 'processing' | 'result' | 'error'
@@ -11,40 +16,19 @@ interface BalanceParams { minBalance: number; windowDays: number; currency: stri
 interface RunwayParams { minMonths: number; windowDays: number; currency: string }
 type ClaimParams = IncomeParams | BalanceParams | RunwayParams
 
-interface ProofResult {
-  id: string
-  verdict: boolean
-  revokeToken: string
-  periodStart?: string
-  periodEnd?: string
-}
-
-interface SavedProof {
-  id: string
-  claimType: ClaimType
-  verdict: boolean
-  revokeToken: string
-  createdAt: string
-  periodStart?: string
-  periodEnd?: string
-}
+interface ProofResult { id: string; verdict: boolean; revokeToken: string; periodStart?: string; periodEnd?: string }
+interface SavedProof { id: string; claimType: ClaimType; verdict: boolean; revokeToken: string; createdAt: string; periodStart?: string; periodEnd?: string }
 
 const STORAGE_KEY = 'vouch_my_proofs'
 
-function loadSavedProofs(): SavedProof[] {
+function loadSaved(): SavedProof[] {
   if (typeof window === 'undefined') return []
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as SavedProof[]
-  } catch {
-    return []
-  }
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as SavedProof[] } catch { return [] }
 }
-
-function persistProof(proof: SavedProof) {
+function persist(proof: SavedProof) {
   if (typeof window === 'undefined') return
-  const proofs = loadSavedProofs()
-  proofs.unshift(proof)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(proofs.slice(0, 20)))
+  const all = loadSaved(); all.unshift(proof)
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(all.slice(0, 20)))
 }
 
 const CLAIM_LABELS: Record<ClaimType, string> = {
@@ -53,13 +37,7 @@ const CLAIM_LABELS: Record<ClaimType, string> = {
   runway_floor: 'Financial Runway',
 }
 
-const CLAIM_DESCRIPTIONS: Record<ClaimType, string> = {
-  income_floor: 'Prove your monthly income meets a minimum threshold',
-  balance_floor: 'Prove your account balance stayed above a floor',
-  runway_floor: 'Prove you have N months of financial runway',
-}
-
-const PROGRESS_MESSAGES = [
+const PROGRESS_MSGS = [
   'Extracting transactions…',
   'Classifying cash flows…',
   'Running claim checks…',
@@ -67,16 +45,28 @@ const PROGRESS_MESSAGES = [
   'Finalising proof…',
 ]
 
+/* ── Shared styles ── */
+const gc: React.CSSProperties = {
+  background: 'rgba(252,249,243,.88)',
+  backdropFilter: 'blur(20px) saturate(130%)',
+  border: '1px solid rgba(255,255,255,.65)',
+  boxShadow: '0 4px 24px -12px rgba(20,16,11,.14), inset 0 1px 0 rgba(255,255,255,.8)',
+  borderRadius: 20,
+}
+
+const inp: React.CSSProperties = {
+  width: '100%', background: 'rgba(240,235,224,.7)',
+  border: '1px solid rgba(20,16,11,.1)', borderRadius: 10,
+  padding: '10px 14px', fontSize: 14, color: 'var(--ink)',
+  outline: 'none', fontFamily: 'inherit',
+}
+
 export default function ProveClient() {
   const [step, setStep] = useState<Step>('upload')
   const [file, setFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [claimType, setClaimType] = useState<ClaimType>('income_floor')
-  const [params, setParams] = useState<ClaimParams>({
-    minMonthlyAmount: 3000,
-    months: 3,
-    currency: 'USD',
-  })
+  const [params, setParams] = useState<ClaimParams>({ minMonthlyAmount: 3000, months: 3, currency: 'USD' })
   const [expiryHours, setExpiryHours] = useState(168)
   const [progressIdx, setProgressIdx] = useState(0)
   const [result, setResult] = useState<ProofResult | null>(null)
@@ -86,53 +76,31 @@ export default function ProveClient() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  useEffect(() => {
-    setMyProofs(loadSavedProofs())
-  }, [])
+  useEffect(() => { setMyProofs(loadSaved()) }, [])
 
   const handleFileSelect = useCallback((f: File) => {
-    if (f.size > 10 * 1024 * 1024) {
-      setError('File too large. Maximum size is 10 MB.')
-      setStep('error')
-      return
-    }
-    if (!f.name.match(/\.(csv|pdf)$/i)) {
-      setError(`Unsupported file type "${f.name.split('.').pop()}". Please upload a CSV or PDF.`)
-      setStep('error')
-      return
-    }
-    setFile(f)
-    setError(null)
-    setStep('upload')
+    if (f.size > 10 * 1024 * 1024) { setError('File too large. Max 10 MB.'); setStep('error'); return }
+    if (!f.name.match(/\.(csv|pdf)$/i)) { setError(`Unsupported type ".${f.name.split('.').pop()}". Use CSV or PDF.`); setStep('error'); return }
+    setFile(f); setError(null); setStep('upload')
   }, [])
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragging(false)
-      const f = e.dataTransfer.files[0]
-      if (f) handleFileSelect(f)
-    },
-    [handleFileSelect],
-  )
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); setIsDragging(false)
+    const f = e.dataTransfer.files[0]; if (f) handleFileSelect(f)
+  }, [handleFileSelect])
 
-  const loadSampleData = async () => {
+  const loadSample = async () => {
     try {
       const res = await fetch('/sample-statement.csv')
-      const text = await res.text()
-      const blob = new Blob([text], { type: 'text/csv' })
-      const f = new File([blob], 'sample-statement.csv', { type: 'text/csv' })
-      setFile(f)
+      const blob = new Blob([await res.text()], { type: 'text/csv' })
+      setFile(new File([blob], 'sample-statement.csv', { type: 'text/csv' }))
       setClaimType('income_floor')
       setParams({ minMonthlyAmount: 3000, months: 3, currency: 'USD' })
       setStep('claim')
-    } catch {
-      setError('Could not load sample data.')
-      setStep('error')
-    }
+    } catch { setError('Could not load sample data.'); setStep('error') }
   }
 
-  const handleClaimTypeChange = (ct: ClaimType) => {
+  const handleClaimChange = (ct: ClaimType) => {
     setClaimType(ct)
     if (ct === 'income_floor') setParams({ minMonthlyAmount: 3000, months: 3, currency: 'USD' })
     else if (ct === 'balance_floor') setParams({ minBalance: 1000, windowDays: 30, currency: 'USD' })
@@ -141,177 +109,207 @@ export default function ProveClient() {
 
   const handleSubmit = async () => {
     if (!file) return
-    setStep('processing')
-    setProgressIdx(0)
-    progressTimer.current = setInterval(() => {
-      setProgressIdx((i) => Math.min(i + 1, PROGRESS_MESSAGES.length - 1))
-    }, 2500)
-
+    setStep('processing'); setProgressIdx(0)
+    progressTimer.current = setInterval(() => setProgressIdx(i => Math.min(i + 1, PROGRESS_MSGS.length - 1)), 2500)
     try {
       const form = new FormData()
-      form.append('file', file)
-      form.append('claimType', claimType)
-      form.append('params', JSON.stringify(params))
-      form.append('expiryHours', String(expiryHours))
-
+      form.append('file', file); form.append('claimType', claimType)
+      form.append('params', JSON.stringify(params)); form.append('expiryHours', String(expiryHours))
       const res = await fetch('/api/proofs', { method: 'POST', body: form })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || `Server error ${res.status}`)
-      }
-      const data = (await res.json()) as ProofResult
+      if (!res.ok) throw new Error(await res.text() || `Server error ${res.status}`)
+      const data = await res.json() as ProofResult
       clearInterval(progressTimer.current!)
-
-      const saved: SavedProof = {
-        id: data.id,
-        claimType,
-        verdict: data.verdict,
-        revokeToken: data.revokeToken,
-        createdAt: new Date().toISOString(),
-        periodStart: data.periodStart,
-        periodEnd: data.periodEnd,
-      }
-      persistProof(saved)
-      setMyProofs(loadSavedProofs())
-      setResult(data)
-      setStep('result')
+      const saved: SavedProof = { id: data.id, claimType, verdict: data.verdict, revokeToken: data.revokeToken, createdAt: new Date().toISOString(), periodStart: data.periodStart, periodEnd: data.periodEnd }
+      persist(saved); setMyProofs(loadSaved()); setResult(data); setStep('result')
     } catch (e) {
-      clearInterval(progressTimer.current!)
-      setError(e instanceof Error ? e.message : 'An unexpected error occurred.')
-      setStep('error')
+      clearInterval(progressTimer.current!); setError(e instanceof Error ? e.message : 'An unexpected error occurred.'); setStep('error')
     }
   }
 
-  const shareLink =
-    result && typeof window !== 'undefined'
-      ? `${window.location.origin}/v/${result.id}`
-      : ''
+  const shareLink = result && typeof window !== 'undefined' ? `${window.location.origin}/v/${result.id}` : ''
 
   const copyLink = async () => {
     if (!shareLink) return
     await navigator.clipboard.writeText(shareLink)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
 
-  const reset = () => {
-    setStep('upload')
-    setFile(null)
-    setResult(null)
-    setError(null)
-    setCopied(false)
-  }
+  const reset = () => { setStep('upload'); setFile(null); setResult(null); setError(null); setCopied(false) }
 
+  /* ── Processing ── */
   if (step === 'processing') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="text-center max-w-sm">
-          <div
-            className="inline-block w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-6"
-            role="status"
-            aria-label="Processing"
-          />
-          <p className="text-lg font-semibold text-gray-900 mb-1">{PROGRESS_MESSAGES[progressIdx]}</p>
-          <p className="text-sm text-gray-500">This takes about 15–30 seconds</p>
+      <div style={{ minHeight: '100vh', background: '#0d0b08', display: 'flex', flexDirection: 'column' }}>
+        <AppNav page="prove" />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, gap: 32 }}>
+          <LisLoader size={88} color="rgba(244,237,224,0.85)" />
+
+          <div style={{ textAlign: 'center', maxWidth: 320 }}>
+            <p style={{ fontSize: 18, fontWeight: 400, color: '#f4ede0', letterSpacing: '-.02em', marginBottom: 8 }}>
+              {PROGRESS_MSGS[progressIdx]}
+            </p>
+            <p style={{ fontSize: 13, color: 'rgba(244,237,224,.45)' }}>Running inside a hardware-sealed TEE</p>
+          </div>
+
+          <div style={{ display: 'flex', gap: 7 }}>
+            {PROGRESS_MSGS.map((_, i) => (
+              <div key={i} style={{
+                width: i <= progressIdx ? 20 : 6, height: 6, borderRadius: 99,
+                background: i <= progressIdx ? 'var(--blue)' : 'rgba(244,237,224,.12)',
+                transition: 'width .4s var(--ease), background .4s',
+              }} />
+            ))}
+          </div>
         </div>
       </div>
     )
   }
 
+  /* ── Error ── */
   if (step === 'error') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="max-w-lg w-full bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
-          <div className="text-5xl mb-4" aria-hidden>❌</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
-          <p className="text-gray-600 mb-6" role="alert">{error}</p>
-          <button
-            onClick={reset}
-            className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
-          >
-            Try again
-          </button>
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <AppNav page="prove" />
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ ...gc, maxWidth: 440, width: '100%', padding: '40px 32px', textAlign: 'center' }}>
+            <div style={{ color: '#dc2626', display: 'flex', justifyContent: 'center', marginBottom: 16 }}><XCircle size={40} /></div>
+            <h1 style={{ fontSize: 20, fontWeight: 500, letterSpacing: '-.02em', marginBottom: 8 }}>Something went wrong</h1>
+            <p style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.55, marginBottom: 28 }} role="alert">{error}</p>
+            <button onClick={reset} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              background: 'var(--ink)', color: '#f4ede0',
+              padding: '11px 24px', borderRadius: 999, fontSize: 13, fontWeight: 500,
+              border: 'none', cursor: 'pointer',
+            }}>Try again</button>
+          </div>
         </div>
       </div>
     )
   }
 
+  /* ── Result ── */
   if (step === 'result' && result) {
     return (
-      <div className="min-h-screen bg-gray-50 py-10 px-4">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <section
-            aria-label="Proof result"
-            className={`rounded-2xl shadow-sm border-2 p-8 text-center ${
-              result.verdict ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'
-            }`}
-          >
-            <div className="text-6xl mb-3" aria-hidden>{result.verdict ? '✅' : '❌'}</div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {result.verdict ? 'Claim Verified' : 'Claim Not Met'}
-            </h1>
-            <p className="text-gray-700 font-medium">{CLAIM_LABELS[claimType]}</p>
-          </section>
+      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <AppNav page="prove" />
 
-          <section aria-label="Share link" className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Share this proof</h2>
-            <div className="flex gap-2">
-              <input
-                readOnly
-                value={shareLink}
-                aria-label="Proof share link"
-                className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-gray-700 focus:outline-none"
-              />
-              <button
-                onClick={copyLink}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
-              >
-                {copied ? 'Copied!' : 'Copy link'}
+        {/* Verdict hero */}
+        <div style={{
+          background: result.verdict ? 'linear-gradient(145deg,#0d1f0f,#0a1a0d)' : 'linear-gradient(145deg,#1a0c0c,#160a0a)',
+          color: '#f4ede0', padding: '52px 24px 48px', position: 'relative', overflow: 'hidden',
+        }}>
+          <div aria-hidden style={{ position:'absolute',inset:0,pointerEvents:'none',
+            background: result.verdict
+              ? 'radial-gradient(ellipse 60% 80% at 30% 50%, rgba(10,158,114,.2) 0%, transparent 60%)'
+              : 'radial-gradient(ellipse 60% 80% at 30% 50%, rgba(220,38,38,.15) 0%, transparent 60%)',
+          }} />
+          <div style={{ maxWidth: 920, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div className="verdict-icon" style={{ color: result.verdict ? '#4de6a8' : '#f87171', flexShrink: 0 }}>
+                {result.verdict ? <CheckCircle size={52} /> : <XCircle size={52} />}
+              </div>
+              <div>
+                <div style={{
+                  display: 'inline-block', marginBottom: 8,
+                  padding: '4px 14px', borderRadius: 999, fontSize: 12, fontWeight: 700, letterSpacing: '.1em',
+                  background: result.verdict ? 'rgba(10,158,114,.25)' : 'rgba(220,38,38,.25)',
+                  color: result.verdict ? '#4de6a8' : '#f87171',
+                  border: `1px solid ${result.verdict ? 'rgba(10,158,114,.4)' : 'rgba(220,38,38,.4)'}`,
+                }}>
+                  {result.verdict ? 'PASS' : 'FAIL'}
+                </div>
+                <h1 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 400, letterSpacing: '-.04em', lineHeight: 1 }}>
+                  {result.verdict ? 'Claim verified' : 'Claim not met'}
+                </h1>
+                <p style={{ marginTop: 8, fontSize: 15, color: 'rgba(244,237,224,.6)', fontWeight: 400 }}>
+                  {CLAIM_LABELS[claimType]}
+                  {result.periodStart && ` · ${result.periodStart} → ${result.periodEnd}`}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ maxWidth: 920, margin: '0 auto', padding: '24px 24px 64px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+          {/* Share link */}
+          <section aria-label="Share link" style={{ ...gc, padding: '20px 22px' }}>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-2)', marginBottom: 12 }}>Share this proof</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input readOnly value={shareLink} aria-label="Proof share link" style={{
+                ...inp, flex: 1, fontSize: 11.5, fontFamily: 'monospace', color: 'var(--ink-2)',
+                background: 'rgba(20,16,11,.03)',
+              }} />
+              <button onClick={copyLink} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: copied ? 'var(--green)' : 'var(--ink)', color: '#f4ede0',
+                padding: '10px 18px', borderRadius: 10, fontSize: 13, fontWeight: 500,
+                border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background .3s',
+              }}>
+                {copied ? <><Check size={12} />Copied</> : <><Copy size={12} />Copy link</>}
               </button>
             </div>
           </section>
 
-          <section
-            aria-label="Revoke token"
-            className="bg-amber-50 rounded-2xl border border-amber-200 p-6"
-          >
-            <h2 className="text-base font-semibold text-amber-900 mb-1">Save your revoke token</h2>
-            <p className="text-sm text-amber-800 mb-3">
-              This is shown once. Keep it safe — you need it to revoke this proof link.
+          {/* Revoke token */}
+          <section aria-label="Revoke token" style={{
+            ...gc, padding: '20px 22px',
+            background: 'rgba(255,250,235,.9)',
+            border: '1px solid rgba(200,144,13,.22)',
+          }}>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#7a5500', marginBottom: 6 }}>Save your revoke token</p>
+            <p style={{ fontSize: 12.5, color: '#8a6500', marginBottom: 12, lineHeight: 1.5 }}>
+              Shown once. Store it safely — you need it to revoke this proof link.
             </p>
-            <code className="block bg-white border border-amber-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-800 break-all">
+            <code style={{
+              display: 'block', background: 'rgba(255,255,255,.65)', border: '1px solid rgba(200,144,13,.2)',
+              borderRadius: 10, padding: '10px 14px', fontSize: 11, fontFamily: 'monospace',
+              color: 'var(--ink)', wordBreak: 'break-all',
+            }}>
               {result.revokeToken}
             </code>
           </section>
 
+          {/* My proofs */}
           {myProofs.length > 0 && (
-            <section aria-label="My proofs" className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">My proofs</h2>
-              <ul className="divide-y divide-gray-100" role="list">
-                {myProofs.slice(0, 5).map((p) => (
-                  <li key={p.id} className="py-3 flex items-center justify-between gap-4">
-                    <div>
-                      <span
-                        className={`text-xs font-bold ${p.verdict ? 'text-green-700' : 'text-red-700'}`}
-                      >
-                        {p.verdict ? '✓ PASS' : '✗ FAIL'}
+            <section aria-label="My proofs" style={{ ...gc, padding: '20px 22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <p style={{ fontSize: 13.5, fontWeight: 500 }}>My proofs</p>
+                <Link href="/my-proofs" style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  View all <ArrowRight size={10} />
+                </Link>
+              </div>
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }} role="list">
+                {myProofs.slice(0, 4).map((p, i) => (
+                  <li key={p.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '9px 0', gap: 12,
+                    borderTop: i > 0 ? '1px solid var(--border)' : undefined,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '3px 8px', borderRadius: 999, fontSize: 10.5, fontWeight: 700,
+                        background: p.verdict ? 'rgba(10,158,114,.1)' : 'rgba(220,38,38,.08)',
+                        color: p.verdict ? '#0a7855' : '#b91c1c',
+                      }}>
+                        {p.verdict ? <Check size={9} /> : <X size={9} />}
+                        {p.verdict ? 'PASS' : 'FAIL'}
+                      </div>
+                      <span style={{ fontSize: 12.5, color: 'var(--ink-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {CLAIM_LABELS[p.claimType as ClaimType]}
                       </span>
-                      <span className="ml-2 text-xs text-gray-500">{CLAIM_LABELS[p.claimType]}</span>
                     </div>
-                    <a href={`/v/${p.id}`} className="text-xs text-blue-600 hover:underline font-medium">
-                      View
-                    </a>
+                    <a href={`/v/${p.id}`} style={{ fontSize: 12, color: 'var(--blue)', flexShrink: 0 }}>View</a>
                   </li>
                 ))}
               </ul>
             </section>
           )}
 
-          <div className="flex justify-center gap-6 text-sm">
-            <Link href="/my-proofs" className="text-blue-600 hover:text-blue-700 font-medium">
-              View all my proofs →
-            </Link>
-            <button onClick={reset} className="text-gray-500 hover:text-gray-700 underline">
+          <div style={{ textAlign: 'center', paddingTop: 4 }}>
+            <button onClick={reset} style={{ fontSize: 13, color: 'var(--ink-2)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
               Create another proof
             </button>
           </div>
@@ -320,160 +318,196 @@ export default function ProveClient() {
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-sm text-gray-500 flex justify-between items-center">
-          <div>
-            <Link href="/" className="hover:text-gray-700 transition-colors">Vouch</Link>
-            <span className="mx-2">›</span>
-            <span>Create proof</span>
-          </div>
-          <Link href="/my-proofs" className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
-            My proofs →
-          </Link>
-        </div>
-        <header className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Create a proof</h1>
-          <p className="mt-2 text-gray-600">Upload a bank statement and choose what to prove.</p>
-        </header>
+  /* ── Upload / Claim form ── */
+  const stepNum = step === 'claim' ? 2 : 1
 
-        {/* File upload — always visible */}
-        <section aria-label="File upload" className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-gray-900">1. Upload your statement</h2>
-            <button
-              onClick={loadSampleData}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <AppNav page="prove" />
+
+      {/* Page header — dark */}
+      <div style={{
+        background: 'var(--ink)', color: '#f4ede0',
+        padding: '44px 24px 40px', position: 'relative', overflow: 'hidden',
+      }}>
+        <div aria-hidden style={{ position:'absolute',top:0,right:0,width:360,height:360,pointerEvents:'none', background:'radial-gradient(circle,rgba(20,72,232,.18) 0%,transparent 65%)' }} />
+        <div aria-hidden style={{ position:'absolute',bottom:-80,left:-40,width:280,height:280,pointerEvents:'none', background:'radial-gradient(circle,rgba(10,158,114,.12) 0%,transparent 65%)' }} />
+        <div style={{ maxWidth: 920, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          {/* Eyebrow */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16,
+            padding: '5px 12px', borderRadius: 999,
+            background: 'rgba(10,158,114,.15)', border: '1px solid rgba(10,158,114,.3)',
+            fontSize: 11.5, fontWeight: 500, color: '#4de6a8', letterSpacing: '.03em',
+          }}>
+            <ShieldCheck size={12} />
+            NEAR AI · TEE Verified
+          </div>
+
+          <h1 style={{ fontSize: 'clamp(32px,4.5vw,52px)', fontWeight: 400, letterSpacing: '-.04em', lineHeight: .95, marginBottom: 12 }}>
+            Create a proof
+          </h1>
+          <p style={{ fontSize: 14, color: 'rgba(244,237,224,.55)', maxWidth: 400, lineHeight: 1.55 }}>
+            Upload a bank statement. We verify your claim inside a hardware-sealed enclave
+            and give you a shareable link.
+          </p>
+
+          {/* Step indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginTop: 28 }}>
+            {[
+              { n: 1, label: 'Upload' },
+              { n: 2, label: 'Configure' },
+              { n: 3, label: 'Generate' },
+            ].map(({ n, label }, i) => (
+              <div key={n} style={{ display: 'flex', alignItems: 'center' }}>
+                {i > 0 && (
+                  <div style={{ width: 24, height: 1, background: n <= stepNum ? 'rgba(20,72,232,.6)' : 'rgba(244,237,224,.15)', margin: '0 2px' }} />
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <div style={{
+                    width: 24, height: 24, borderRadius: '50%', display: 'grid', placeItems: 'center',
+                    background: n < stepNum ? 'var(--blue)' : n === stepNum ? 'rgba(20,72,232,.9)' : 'rgba(244,237,224,.1)',
+                    border: n === stepNum ? '1px solid rgba(20,72,232,.8)' : '1px solid rgba(244,237,224,.12)',
+                    fontSize: 10, fontWeight: 700, color: n <= stepNum ? '#fff' : 'rgba(244,237,224,.4)',
+                    flexShrink: 0,
+                  }}>
+                    {n < stepNum ? <Check size={10} /> : n}
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: n === stepNum ? 500 : 400, color: n === stepNum ? '#f4ede0' : 'rgba(244,237,224,.4)' }}>
+                    {label}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Form content */}
+      <div style={{ maxWidth: 920, margin: '0 auto', padding: '24px 24px 64px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+        {/* Upload card */}
+        <section aria-label="File upload" style={{ ...gc, padding: '22px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <p style={{ fontSize: 13.5, fontWeight: 500 }}>
+              {file ? 'Statement ready' : 'Upload statement'}
+            </p>
+            <button onClick={loadSample} style={{ fontSize: 12.5, color: 'var(--blue)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
               Try sample data
             </button>
           </div>
 
           {file ? (
-            <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl" aria-hidden>📄</span>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: 'rgba(10,158,114,.06)', border: '1px solid rgba(10,158,114,.2)',
+              borderRadius: 12, padding: '12px 16px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(10,158,114,.12)', display: 'grid', placeItems: 'center', color: 'var(--green)', flexShrink: 0 }}>
+                  <FileText size={18} />
+                </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                  <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                  <p style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--ink)' }}>{file.name}</p>
+                  <p style={{ fontSize: 11.5, color: 'var(--ink-2)', marginTop: 1 }}>{(file.size / 1024).toFixed(1)} KB · Ready to verify</p>
                 </div>
               </div>
-              <button
-                onClick={() => { setFile(null); setStep('upload') }}
-                className="text-xs text-gray-500 hover:text-gray-700"
-              >
-                Remove
+              <button onClick={() => { setFile(null); setStep('upload') }} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--ink-2)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X size={12} /> Remove
               </button>
             </div>
           ) : (
             <div
-              role="button"
-              tabIndex={0}
-              aria-label="Drop zone for bank statement file"
+              role="button" tabIndex={0} aria-label="Drop zone for bank statement"
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click()
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click() }}
+              style={{
+                border: `2px dashed ${isDragging ? 'var(--blue)' : 'rgba(20,16,11,.12)'}`,
+                borderRadius: 14, padding: '32px 20px', textAlign: 'center', cursor: 'pointer',
+                background: isDragging ? 'rgba(20,72,232,.03)' : 'rgba(20,16,11,.015)',
+                transition: 'border-color .2s, background .2s',
               }}
-              className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
-                isDragging
-                  ? 'border-green-400 bg-green-50'
-                  : 'border-gray-300 hover:border-gray-400 bg-gray-50'
-              }`}
             >
-              <div className="text-4xl mb-3" aria-hidden>📂</div>
-              <p className="text-sm font-medium text-gray-700">Drop your bank statement here</p>
-              <p className="text-xs text-gray-500 mt-1">CSV or PDF · max 10 MB</p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv,.pdf"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0]
-                  if (f) handleFileSelect(f)
-                }}
-              />
+              <div style={{ color: isDragging ? 'var(--blue)' : 'var(--ink-2)', display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+                <UploadCloud size={28} />
+              </div>
+              <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)', marginBottom: 4 }}>Drop your bank statement here</p>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>CSV or PDF · max 10 MB</p>
+              <input ref={fileInputRef} type="file" accept=".csv,.pdf" style={{ display: 'none' }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f) }} />
             </div>
           )}
 
           {file && step === 'upload' && (
-            <button
-              onClick={() => setStep('claim')}
-              className="mt-4 w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
-            >
-              Continue
+            <button onClick={() => setStep('claim')} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              marginTop: 14, width: '100%', padding: '13px',
+              background: 'var(--ink)', color: '#f4ede0',
+              borderRadius: 999, fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer',
+              transition: 'box-shadow .3s',
+            }}>
+              Continue <ArrowRight size={13} />
             </button>
           )}
         </section>
 
-        {/* Claim picker */}
+        {/* Claim config */}
         {step === 'claim' && (
-          <section aria-label="Claim configuration" className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">2. Choose your claim</h2>
+          <section aria-label="Claim configuration" style={{ ...gc, padding: '22px' }}>
+            <p style={{ fontSize: 13.5, fontWeight: 500, marginBottom: 16 }}>Choose your claim</p>
 
-            <fieldset className="space-y-3 mb-6">
+            <fieldset style={{ border: 'none', margin: 0, padding: 0, marginBottom: 20 }}>
               <legend className="sr-only">Claim type</legend>
-              {(['income_floor', 'balance_floor', 'runway_floor'] as ClaimType[]).map((ct) => (
-                <label
-                  key={ct}
-                  className={`flex items-start gap-3 border-2 rounded-xl p-4 cursor-pointer transition-colors ${
-                    claimType === ct
-                      ? 'border-green-400 bg-green-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="claimType"
-                    value={ct}
-                    checked={claimType === ct}
-                    onChange={() => handleClaimTypeChange(ct)}
-                    className="mt-0.5"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{CLAIM_LABELS[ct]}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{CLAIM_DESCRIPTIONS[ct]}</p>
-                  </div>
-                </label>
-              ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {([
+                  { ct: 'income_floor' as ClaimType, icon: <TrendingUp size={16} />, iconC: 'var(--green)', iconBg: 'rgba(10,158,114,.1)', label: 'Monthly Income Floor', desc: 'Prove income meets a minimum' },
+                  { ct: 'balance_floor' as ClaimType, icon: <CreditCard size={16} />, iconC: 'var(--blue)', iconBg: 'rgba(20,72,232,.1)', label: 'Account Balance Floor', desc: 'Prove balance stayed above a threshold' },
+                  { ct: 'runway_floor' as ClaimType, icon: <CalendarRange size={16} />, iconC: 'var(--amber)', iconBg: 'rgba(200,144,13,.1)', label: 'Financial Runway', desc: 'Prove N months of runway' },
+                ]).map(({ ct, icon, iconC, iconBg, label, desc }) => (
+                  <label key={ct} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    border: `1.5px solid ${claimType === ct ? 'rgba(20,72,232,.35)' : 'rgba(20,16,11,.08)'}`,
+                    borderRadius: 14, padding: '12px 14px', cursor: 'pointer',
+                    background: claimType === ct ? 'rgba(20,72,232,.04)' : 'transparent',
+                    transition: 'border-color .2s, background .2s',
+                  }}>
+                    <input type="radio" name="claimType" value={ct} checked={claimType === ct} onChange={() => handleClaimChange(ct)} style={{ display: 'none' }} />
+                    <div style={{ width: 32, height: 32, borderRadius: 9, background: iconBg, display: 'grid', placeItems: 'center', flexShrink: 0, color: iconC }}>
+                      {icon}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--ink)' }}>{label}</p>
+                      <p style={{ fontSize: 11.5, color: 'var(--ink-2)', marginTop: 1 }}>{desc}</p>
+                    </div>
+                    <div style={{
+                      width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                      border: `2px solid ${claimType === ct ? 'var(--blue)' : 'rgba(20,16,11,.2)'}`,
+                      background: claimType === ct ? 'var(--blue)' : 'transparent',
+                      display: 'grid', placeItems: 'center', transition: 'all .2s',
+                    }}>
+                      {claimType === ct && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                    </div>
+                  </label>
+                ))}
+              </div>
             </fieldset>
 
-            <div className="border-t border-gray-100 pt-4 mb-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">3. Set thresholds</h3>
-              {claimType === 'income_floor' && (
-                <IncomeParamsForm
-                  params={params as IncomeParams}
-                  onChange={(p) => setParams(p)}
-                />
-              )}
-              {claimType === 'balance_floor' && (
-                <BalanceParamsForm
-                  params={params as BalanceParams}
-                  onChange={(p) => setParams(p)}
-                />
-              )}
-              {claimType === 'runway_floor' && (
-                <RunwayParamsForm
-                  params={params as RunwayParams}
-                  onChange={(p) => setParams(p)}
-                />
-              )}
+            {/* Params */}
+            <div style={{ padding: '16px 0', borderTop: '1px solid rgba(20,16,11,.06)', borderBottom: '1px solid rgba(20,16,11,.06)', marginBottom: 16 }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', letterSpacing: '.04em', textTransform: 'uppercase', marginBottom: 14 }}>Set thresholds</p>
+              {claimType === 'income_floor' && <IncomeForm params={params as IncomeParams} onChange={p => setParams(p)} inp={inp} />}
+              {claimType === 'balance_floor' && <BalanceForm params={params as BalanceParams} onChange={p => setParams(p)} inp={inp} />}
+              {claimType === 'runway_floor' && <RunwayForm params={params as RunwayParams} onChange={p => setParams(p)} inp={inp} />}
             </div>
 
-            <div className="mb-6">
-              <label className="text-sm font-medium text-gray-700 block mb-2" htmlFor="expiry">
-                Link expires in
-              </label>
-              <select
-                id="expiry"
-                value={expiryHours}
-                onChange={(e) => setExpiryHours(Number(e.target.value))}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
+            {/* Expiry */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+              <label htmlFor="expiry" style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink)', flexShrink: 0 }}>Link expires in</label>
+              <select id="expiry" value={expiryHours} onChange={e => setExpiryHours(Number(e.target.value))}
+                style={{ ...inp, width: 'auto', cursor: 'pointer', flex: 1 }}>
                 <option value={24}>24 hours</option>
                 <option value={72}>3 days</option>
                 <option value={168}>7 days</option>
@@ -481,33 +515,45 @@ export default function ProveClient() {
               </select>
             </div>
 
-            <button
-              onClick={handleSubmit}
-              className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors shadow-sm"
-            >
-              Generate Proof
+            <button onClick={handleSubmit} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              width: '100%', padding: '14px',
+              background: 'var(--blue)', color: '#fff',
+              borderRadius: 999, fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer',
+              boxShadow: '0 8px 24px -10px rgba(20,72,232,.5)',
+              transition: 'box-shadow .3s',
+            }}>
+              Generate proof <ArrowRight size={13} />
             </button>
           </section>
         )}
 
-        {/* My proofs */}
-        {myProofs.length > 0 && (
-          <section aria-label="My proofs" className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-3">My proofs</h2>
-            <ul className="divide-y divide-gray-100" role="list">
-              {myProofs.slice(0, 5).map((p) => (
-                <li key={p.id} className="py-2.5 flex items-center justify-between gap-4">
-                  <div>
-                    <span
-                      className={`text-xs font-bold ${p.verdict ? 'text-green-700' : 'text-red-700'}`}
-                    >
-                      {p.verdict ? '✓ PASS' : '✗ FAIL'}
+        {/* My proofs sidebar */}
+        {myProofs.length > 0 && step === 'upload' && (
+          <section aria-label="Recent proofs" style={{ ...gc, padding: '18px 22px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-2)' }}>Recent proofs</p>
+              <Link href="/my-proofs" style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                All <ArrowRight size={10} />
+              </Link>
+            </div>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }} role="list">
+              {myProofs.slice(0, 3).map((p, i) => (
+                <li key={p.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 0', borderTop: i > 0 ? '1px solid rgba(20,16,11,.06)' : undefined, gap: 10,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <div style={{
+                      padding: '2px 8px', borderRadius: 999, fontSize: 10.5, fontWeight: 700,
+                      background: p.verdict ? 'rgba(10,158,114,.1)' : 'rgba(220,38,38,.08)',
+                      color: p.verdict ? '#0a7855' : '#b91c1c', flexShrink: 0,
+                    }}>{p.verdict ? 'PASS' : 'FAIL'}</div>
+                    <span style={{ fontSize: 12, color: 'var(--ink-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {CLAIM_LABELS[p.claimType as ClaimType]}
                     </span>
-                    <span className="ml-2 text-xs text-gray-500">{CLAIM_LABELS[p.claimType]}</span>
                   </div>
-                  <a href={`/v/${p.id}`} className="text-xs text-blue-600 hover:underline font-medium">
-                    View
-                  </a>
+                  <a href={`/v/${p.id}`} style={{ fontSize: 12, color: 'var(--blue)', flexShrink: 0 }}>View</a>
                 </li>
               ))}
             </ul>
@@ -518,139 +564,63 @@ export default function ProveClient() {
   )
 }
 
-function IncomeParamsForm({
-  params,
-  onChange,
-}: {
-  params: IncomeParams
-  onChange: (p: IncomeParams) => void
-}) {
+function IncomeForm({ params, onChange, inp }: { params: IncomeParams; onChange: (p: IncomeParams) => void; inp: React.CSSProperties }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <label className="block">
-        <span className="text-xs text-gray-600 font-medium">Min monthly income</span>
-        <input
-          type="number"
-          min={0}
-          value={params.minMonthlyAmount}
-          onChange={(e) => onChange({ ...params, minMonthlyAmount: Number(e.target.value) })}
-          className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+      <label style={{ display: 'block' }}>
+        <span style={{ fontSize: 11.5, color: 'var(--ink-2)', fontWeight: 500, display: 'block', marginBottom: 6 }}>Min monthly income</span>
+        <input type="number" min={0} value={params.minMonthlyAmount} onChange={e => onChange({ ...params, minMonthlyAmount: Number(e.target.value) })} style={inp} />
       </label>
-      <label className="block">
-        <span className="text-xs text-gray-600 font-medium">Months to check</span>
-        <input
-          type="number"
-          min={1}
-          max={24}
-          value={params.months}
-          onChange={(e) => onChange({ ...params, months: Number(e.target.value) })}
-          className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
+      <label style={{ display: 'block' }}>
+        <span style={{ fontSize: 11.5, color: 'var(--ink-2)', fontWeight: 500, display: 'block', marginBottom: 6 }}>Months to check</span>
+        <input type="number" min={1} max={24} value={params.months} onChange={e => onChange({ ...params, months: Number(e.target.value) })} style={inp} />
       </label>
-      <label className="block">
-        <span className="text-xs text-gray-600 font-medium">Currency</span>
-        <select
-          value={params.currency}
-          onChange={(e) => onChange({ ...params, currency: e.target.value })}
-          className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
-          <option>USD</option>
-          <option>EUR</option>
-          <option>GBP</option>
-          <option>INR</option>
+      <label style={{ display: 'block' }}>
+        <span style={{ fontSize: 11.5, color: 'var(--ink-2)', fontWeight: 500, display: 'block', marginBottom: 6 }}>Currency</span>
+        <select value={params.currency} onChange={e => onChange({ ...params, currency: e.target.value })} style={{ ...inp, cursor: 'pointer' }}>
+          <option>USD</option><option>EUR</option><option>GBP</option><option>INR</option>
         </select>
       </label>
     </div>
   )
 }
 
-function BalanceParamsForm({
-  params,
-  onChange,
-}: {
-  params: BalanceParams
-  onChange: (p: BalanceParams) => void
-}) {
+function BalanceForm({ params, onChange, inp }: { params: BalanceParams; onChange: (p: BalanceParams) => void; inp: React.CSSProperties }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <label className="block">
-        <span className="text-xs text-gray-600 font-medium">Minimum balance</span>
-        <input
-          type="number"
-          min={0}
-          value={params.minBalance}
-          onChange={(e) => onChange({ ...params, minBalance: Number(e.target.value) })}
-          className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+      <label style={{ display: 'block' }}>
+        <span style={{ fontSize: 11.5, color: 'var(--ink-2)', fontWeight: 500, display: 'block', marginBottom: 6 }}>Minimum balance</span>
+        <input type="number" min={0} value={params.minBalance} onChange={e => onChange({ ...params, minBalance: Number(e.target.value) })} style={inp} />
       </label>
-      <label className="block">
-        <span className="text-xs text-gray-600 font-medium">Window (days)</span>
-        <input
-          type="number"
-          min={1}
-          value={params.windowDays}
-          onChange={(e) => onChange({ ...params, windowDays: Number(e.target.value) })}
-          className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
+      <label style={{ display: 'block' }}>
+        <span style={{ fontSize: 11.5, color: 'var(--ink-2)', fontWeight: 500, display: 'block', marginBottom: 6 }}>Window (days)</span>
+        <input type="number" min={1} value={params.windowDays} onChange={e => onChange({ ...params, windowDays: Number(e.target.value) })} style={inp} />
       </label>
-      <label className="block">
-        <span className="text-xs text-gray-600 font-medium">Currency</span>
-        <select
-          value={params.currency}
-          onChange={(e) => onChange({ ...params, currency: e.target.value })}
-          className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
-          <option>USD</option>
-          <option>EUR</option>
-          <option>GBP</option>
-          <option>INR</option>
+      <label style={{ display: 'block' }}>
+        <span style={{ fontSize: 11.5, color: 'var(--ink-2)', fontWeight: 500, display: 'block', marginBottom: 6 }}>Currency</span>
+        <select value={params.currency} onChange={e => onChange({ ...params, currency: e.target.value })} style={{ ...inp, cursor: 'pointer' }}>
+          <option>USD</option><option>EUR</option><option>GBP</option><option>INR</option>
         </select>
       </label>
     </div>
   )
 }
 
-function RunwayParamsForm({
-  params,
-  onChange,
-}: {
-  params: RunwayParams
-  onChange: (p: RunwayParams) => void
-}) {
+function RunwayForm({ params, onChange, inp }: { params: RunwayParams; onChange: (p: RunwayParams) => void; inp: React.CSSProperties }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <label className="block">
-        <span className="text-xs text-gray-600 font-medium">Min runway (months)</span>
-        <input
-          type="number"
-          min={1}
-          value={params.minMonths}
-          onChange={(e) => onChange({ ...params, minMonths: Number(e.target.value) })}
-          className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+      <label style={{ display: 'block' }}>
+        <span style={{ fontSize: 11.5, color: 'var(--ink-2)', fontWeight: 500, display: 'block', marginBottom: 6 }}>Min runway (months)</span>
+        <input type="number" min={1} value={params.minMonths} onChange={e => onChange({ ...params, minMonths: Number(e.target.value) })} style={inp} />
       </label>
-      <label className="block">
-        <span className="text-xs text-gray-600 font-medium">Window (days)</span>
-        <input
-          type="number"
-          min={1}
-          value={params.windowDays}
-          onChange={(e) => onChange({ ...params, windowDays: Number(e.target.value) })}
-          className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
+      <label style={{ display: 'block' }}>
+        <span style={{ fontSize: 11.5, color: 'var(--ink-2)', fontWeight: 500, display: 'block', marginBottom: 6 }}>Window (days)</span>
+        <input type="number" min={1} value={params.windowDays} onChange={e => onChange({ ...params, windowDays: Number(e.target.value) })} style={inp} />
       </label>
-      <label className="block">
-        <span className="text-xs text-gray-600 font-medium">Currency</span>
-        <select
-          value={params.currency}
-          onChange={(e) => onChange({ ...params, currency: e.target.value })}
-          className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
-          <option>USD</option>
-          <option>EUR</option>
-          <option>GBP</option>
-          <option>INR</option>
+      <label style={{ display: 'block' }}>
+        <span style={{ fontSize: 11.5, color: 'var(--ink-2)', fontWeight: 500, display: 'block', marginBottom: 6 }}>Currency</span>
+        <select value={params.currency} onChange={e => onChange({ ...params, currency: e.target.value })} style={{ ...inp, cursor: 'pointer' }}>
+          <option>USD</option><option>EUR</option><option>GBP</option><option>INR</option>
         </select>
       </label>
     </div>

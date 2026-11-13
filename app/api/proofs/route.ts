@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+
+export const maxDuration = 60 // seconds — NEAR AI classification + attestation can take 30s+
+
 import { extractFromBuffer } from '@/lib/extract/index'
 import { computeClaim, ClaimType, ClaimParams } from '@/lib/claims/index'
 import { createProof, ExpiryOption } from '@/lib/proofs/index'
@@ -58,7 +61,7 @@ export async function POST(req: NextRequest) {
     const attestation = await fetchAndVerifyAttestation(nonce)
 
     // Persist proof record (P2: no raw data)
-    const { proof, revokeToken } = createProof(disclosure, attestation, expiryHours)
+    const { proof, revokeToken } = await createProof(disclosure, attestation, expiryHours)
 
     return NextResponse.json({
       id: proof.id,

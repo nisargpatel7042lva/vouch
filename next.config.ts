@@ -25,6 +25,8 @@ const nextConfig: NextConfig = {
   eslint: {
     dirs: ['app', 'lib', 'scripts'],
   },
+  // Native modules — do not bundle; load from node_modules at runtime
+  serverExternalPackages: ['better-sqlite3', 'pdf-parse'],
   async headers() {
     return [
       {

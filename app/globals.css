@@ -1,3 +1,330 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Design tokens ────────────────────────────────────────────────── */
+:root {
+  --bg:       #f0ebe0;
+  --bg-2:     #e8e1d6;
+  --ink:      #14100b;
+  --ink-2:    #57473c;
+  --blue:     #1448e8;
+  --blue-dim: #3360ea;
+  --green:    #0a9e72;
+  --amber:    #c8900d;
+  --glass:    rgba(255, 252, 247, 0.60);
+  --glass-b:  rgba(255, 255, 255, 0.70);
+  --border:   rgba(20, 16, 11, 0.09);
+  --ease:     cubic-bezier(.22, 1, .36, 1);
+  --ease-io:  cubic-bezier(.65, 0, .35, 1);
+}
+
+/* ── Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-inter-tight, 'Inter Tight', system-ui, sans-serif);
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, video { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button, input { font: inherit; }
+
+/* Lenis */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+/* ── Reveal animations ──────────────────────────────────────────────
+   Progressive enhancement: .rv elements start hidden only once JS
+   adds the .js class to <html>. Without JS they're always visible.  */
+.js .rv {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  filter: blur(6px);
+}
+.rv {
+  transition:
+    opacity 1.1s var(--ease),
+    transform 1.1s var(--ease),
+    filter 1.1s var(--ease);
+  transition-delay: calc(var(--d, 0) * 90ms + var(--base, 0ms));
+}
+.js .rv.rv-scale { transform: scale(.97) translateY(20px); }
+.js .rv.in {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* ── Split heading reveal ───────────────────────────────────────────
+   Every word is wrapped in .w > span by JS at runtime.             */
+.split .w {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding: 0 .02em .12em;
+  margin: 0 -.02em -.12em;
+}
+.split .w > span {
+  display: inline-block;
+  will-change: transform;
+}
+.js .split .w > span {
+  transform: translateY(110%) rotate(3deg);
+  opacity: 0;
+  transition:
+    transform 1.2s var(--ease),
+    opacity 1.2s var(--ease);
+  transition-delay: calc(var(--i) * 70ms + var(--base, 0ms));
+}
+.js .split.in .w > span {
+  transform: none;
+  opacity: 1;
+}
+
+/* ── Hero display heading ────────────────────────────────────────── */
+.h-display {
+  font-weight: 400;
+  font-size: clamp(44px, 6.8vw, 100px);
+  line-height: .92;
+  letter-spacing: -.045em;
+}
+.h-display .w > span {
+  background: linear-gradient(170deg, #1a130d 0%, #6b4f3c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Accent word in display heading */
+.h-display .accent-word .w > span {
+  background: linear-gradient(170deg, var(--blue) 0%, var(--blue-dim) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* ── Section heading ─────────────────────────────────────────────── */
+.h2 {
+  font-weight: 400;
+  font-size: clamp(30px, 3.8vw, 56px);
+  line-height: 1.04;
+  letter-spacing: -.04em;
+  margin-top: 14px;
+}
+.h2 .lt { color: #9b887a; font-weight: 300; }
+
+/* ── Chat demo in hero ───────────────────────────────────────────── */
+.msg {
+  opacity: 0;
+  transform: translateY(10px) scale(.98);
+  transition: opacity .7s var(--ease), transform .7s var(--ease);
+}
+.msg.show { opacity: 1; transform: none; }
+
+.bubble {
+  align-self: flex-end;
+  max-width: 76%;
+  background: rgba(255, 252, 248, .92);
+  border-radius: 14px;
+  padding: 9px 13px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #3b2a1e;
+  box-shadow: 0 4px 14px -8px rgba(40, 20, 10, .22);
+}
+
+.ai-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-width: 86%;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #3d2e24;
+}
+
+/* Typing indicator */
+.typing {
+  display: inline-flex;
+  gap: 4px;
+  padding: 5px 0;
+  align-self: flex-start;
+}
+.typing i {
+  display: block;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #7a675b;
+  animation: dot 1.2s infinite ease-in-out;
+}
+.typing i:nth-child(2) { animation-delay: .15s; }
+.typing i:nth-child(3) { animation-delay: .30s; }
+@keyframes dot {
+  0%, 80%, 100% { opacity: .25; transform: none; }
+  40% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* ai-t: invisible full-height copy so card never resizes during typing */
+.ai-t { display: grid; }
+.ai-t > span { grid-area: 1/1; }
+.ai-t .ghost { visibility: hidden; }
+
+/* ── Proof card preview ──────────────────────────────────────────── */
+.proof-card-anim {
+  transition: transform 2.4s var(--ease);
+  transform: scale(1.12);
+}
+.proof-card-anim.in { transform: scale(1); }
+
+/* ── Gauge / arc ─────────────────────────────────────────────────── */
+#g-arc {
+  transition: stroke-dashoffset 2.2s cubic-bezier(.22, 1, .36, 1);
+}
+#ring-arc {
+  transition: stroke-dashoffset 2s cubic-bezier(.22, 1, .36, 1) .3s;
+}
+
+/* ── Bento card hover ───────────────────────────────────────────── */
+.bento-card {
+  transition: transform .6s var(--ease), box-shadow .6s var(--ease);
+}
+.bento-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 28px 56px -24px rgba(20, 16, 11, .4);
+}
+
+/* ── Float animation (chip) ─────────────────────────────────────── */
+@keyframes float {
+  from { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+  to { transform: translateY(0); }
+}
+
+/* ── Ken Burns on static image ──────────────────────────────────── */
+@keyframes kb {
+  from { transform: scale(1.04); }
+  to { transform: scale(1.1) translate3d(-1%, -.5%, 0); }
+}
+.kb { animation: kb 20s var(--ease-io) infinite alternate; }
+
+/* ── Shimmer for loading state ──────────────────────────────────── */
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+/* ── Progress bar ────────────────────────────────────────────────── */
+.prog-bar b {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue) 0%, #4f7af0 100%);
+  width: 0;
+  transition: width 2.2s var(--ease) .4s;
+  border-radius: 99px;
+}
+.prog-bar.in b { width: 72%; }
+
+/* ── Step connector line ─────────────────────────────────────────── */
+.step-line {
+  position: absolute;
+  top: 20px; left: 20px;
+  width: calc(100% - 20px);
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Cycling word in hero ───────────────────────────────────────── */
+.cycle-slot {
+  display: inline-block;
+  position: relative;
+  overflow: visible;
+}
+.cycle-word {
+  display: inline-block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transform: translateY(.35em);
+  filter: blur(7px);
+  white-space: nowrap;
+  transition:
+    opacity .55s var(--ease),
+    transform .55s var(--ease),
+    filter .55s var(--ease);
+  pointer-events: none;
+}
+.cycle-word.active {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  pointer-events: auto;
+  /* stays position: absolute — do NOT add position: relative here */
+}
+.cycle-word.leaving {
+  opacity: 0;
+  transform: translateY(-.25em);
+  filter: blur(6px);
+}
+
+/* ── LIS Loader ──────────────────────────────────────────────────── */
+.lis-rig {
+  transform-box: view-box;
+  transform-origin: center;
+  animation: lis-drift 16s linear infinite;
+}
+.lis-track, .lis-tail, .lis-mid, .lis-head {
+  stroke: currentColor;
+  stroke-linecap: round;
+  fill: none;
+}
+.lis-track { stroke-width: 1; opacity: .16; }
+.lis-tail, .lis-mid, .lis-head {
+  animation-duration: 3.2s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.lis-head { stroke-width: 2.2; stroke-dasharray: 3 97;  stroke-dashoffset: 0;  animation-name: lis-head; }
+.lis-mid  { stroke-width: 1.8; stroke-dasharray: 9 91;  stroke-dashoffset: 9;  opacity: .5;  animation-name: lis-mid; }
+.lis-tail { stroke-width: 1.3; stroke-dasharray: 20 80; stroke-dashoffset: 29; opacity: .22; animation-name: lis-tail; }
+@keyframes lis-head { from { stroke-dashoffset: 0; }   to { stroke-dashoffset: -100; } }
+@keyframes lis-mid  { from { stroke-dashoffset: 9; }   to { stroke-dashoffset: -91; } }
+@keyframes lis-tail { from { stroke-dashoffset: 29; }  to { stroke-dashoffset: -71; } }
+@keyframes lis-drift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ── Verdict entrance ────────────────────────────────────────────── */
+@keyframes verdictBounce {
+  0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
+  60%  { transform: scale(1.12) rotate(5deg); opacity: 1; }
+  80%  { transform: scale(0.94) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.verdict-icon {
+  animation: verdictBounce .65s var(--ease) forwards;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: .01ms !important;
+    transition-delay: 0ms !important;
+  }
+  .js .rv, .js .split .w > span, .msg {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .lis-rig, .lis-head, .lis-mid, .lis-tail { animation: none !important; }
+}

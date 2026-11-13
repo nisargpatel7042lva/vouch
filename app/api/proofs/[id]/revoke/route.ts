@@ -19,7 +19,7 @@ export async function POST(
     return NextResponse.json({ error: 'revokeToken is required' }, { status: 400 })
   }
 
-  const result = revokeProof(id, token)
+  const result = await revokeProof(id, token)
 
   switch (result) {
     case 'ok':

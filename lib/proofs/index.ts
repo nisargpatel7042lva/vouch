@@ -1,9 +1,10 @@
 /**
  * Proof record management.
  * P2: only stores verdict, claim params, disclosure, attestation summary.
+ * Production (KV_REST_API_URL set): uses Vercel KV (Redis).
+ * Development/test: uses SQLite (better-sqlite3).
  */
 import crypto from 'crypto'
-import { getDb, hashToken } from './db'
 import type { Disclosure } from '../claims/index'
 import type { AttestationResult } from '../near/attest'
 
@@ -36,7 +37,7 @@ export interface AttestationSummary {
 
 export interface CreateProofResult {
   proof: ProofRecord
-  revokeToken: string // shown to prover once; stored only as hash
+  revokeToken: string
 }
 
 export function summariseAttestation(result: AttestationResult): AttestationSummary {
@@ -51,13 +52,61 @@ export function summariseAttestation(result: AttestationResult): AttestationSumm
   }
 }
 
-export function createProof(
+// ── Store routing ──────────────────────────────────────────────────────────
+
+function useKv(): boolean {
+  return !!process.env.KV_REST_API_URL
+}
+
+export async function createProof(
   disclosure: Disclosure,
   attestation: AttestationResult,
   expiryHours: ExpiryOption = 168
-): CreateProofResult {
+): Promise<CreateProofResult> {
+  if (useKv()) {
+    const { kvCreateProof } = await import('./kv-store')
+    return kvCreateProof(disclosure, attestation, expiryHours)
+  }
+  return createProofSqlite(disclosure, attestation, expiryHours)
+}
+
+export async function getProof(id: string): Promise<ProofRecord | null> {
+  if (useKv()) {
+    const { kvGetProof } = await import('./kv-store')
+    return kvGetProof(id)
+  }
+  return getProofSqlite(id)
+}
+
+export async function revokeProof(
+  id: string,
+  token: string
+): Promise<'ok' | 'not_found' | 'wrong_token' | 'already_revoked'> {
+  if (useKv()) {
+    const { kvRevokeProof } = await import('./kv-store')
+    return kvRevokeProof(id, token)
+  }
+  return revokeProofSqlite(id, token)
+}
+
+export function isExpired(proof: ProofRecord): boolean {
+  return new Date(proof.expiresAt) < new Date()
+}
+
+export function isRevoked(proof: ProofRecord): boolean {
+  return proof.revokedAt !== null
+}
+
+// ── SQLite implementation (dev / test) ─────────────────────────────────────
+
+async function createProofSqlite(
+  disclosure: Disclosure,
+  attestation: AttestationResult,
+  expiryHours: ExpiryOption
+): Promise<CreateProofResult> {
+  const { getDb, hashToken } = await import('./db')
   const db = getDb()
-  const id = crypto.randomBytes(16).toString('hex') // 128-bit random id
+  const id = crypto.randomBytes(16).toString('hex')
   const revokeToken = crypto.randomBytes(32).toString('hex')
   const revokeTokenHash = hashToken(revokeToken)
 
@@ -84,8 +133,7 @@ export function createProof(
     INSERT INTO proofs
       (id, claimType, verdict, disclosureJson, attestationSummary, currency,
        periodStart, periodEnd, expiryHours, createdAt, expiresAt, revokedAt, revokeTokenHash)
-    VALUES
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     record.id,
     record.claimType,
@@ -105,64 +153,39 @@ export function createProof(
   return { proof: record, revokeToken }
 }
 
-export function getProof(id: string): ProofRecord | null {
-  const db = getDb()
-  const row = db.prepare('SELECT * FROM proofs WHERE id = ?').get(id) as DbRow | undefined
-  if (!row) return null
-  return rowToRecord(row)
+interface DbRow {
+  id: string; claimType: string; verdict: number; disclosureJson: string
+  attestationSummary: string; currency: string; periodStart: string
+  periodEnd: string; expiryHours: number; createdAt: string; expiresAt: string
+  revokedAt: string | null; revokeTokenHash: string
 }
 
-export function revokeProof(id: string, token: string): 'ok' | 'not_found' | 'wrong_token' | 'already_revoked' {
+async function getProofSqlite(id: string): Promise<ProofRecord | null> {
+  const { getDb } = await import('./db')
+  const row = getDb().prepare('SELECT * FROM proofs WHERE id = ?').get(id) as DbRow | undefined
+  if (!row) return null
+  return {
+    id: row.id, claimType: row.claimType, verdict: row.verdict === 1,
+    disclosure: JSON.parse(row.disclosureJson) as Disclosure,
+    attestationSummary: JSON.parse(row.attestationSummary) as AttestationSummary,
+    currency: row.currency, periodStart: row.periodStart, periodEnd: row.periodEnd,
+    expiryHours: row.expiryHours as ExpiryOption, createdAt: row.createdAt,
+    expiresAt: row.expiresAt, revokedAt: row.revokedAt,
+  }
+}
+
+async function revokeProofSqlite(
+  id: string,
+  token: string
+): Promise<'ok' | 'not_found' | 'wrong_token' | 'already_revoked'> {
+  const { getDb, hashToken } = await import('./db')
   const db = getDb()
   const row = db.prepare('SELECT revokeTokenHash, revokedAt FROM proofs WHERE id = ?').get(id) as
     | Pick<DbRow, 'revokeTokenHash' | 'revokedAt'>
     | undefined
-
   if (!row) return 'not_found'
   if (row.revokedAt) return 'already_revoked'
   if (hashToken(token) !== row.revokeTokenHash) return 'wrong_token'
-
   db.prepare('UPDATE proofs SET revokedAt = ? WHERE id = ?').run(new Date().toISOString(), id)
   return 'ok'
-}
-
-interface DbRow {
-  id: string
-  claimType: string
-  verdict: number
-  disclosureJson: string
-  attestationSummary: string
-  currency: string
-  periodStart: string
-  periodEnd: string
-  expiryHours: number
-  createdAt: string
-  expiresAt: string
-  revokedAt: string | null
-  revokeTokenHash: string
-}
-
-function rowToRecord(row: DbRow): ProofRecord {
-  return {
-    id: row.id,
-    claimType: row.claimType,
-    verdict: row.verdict === 1,
-    disclosure: JSON.parse(row.disclosureJson) as Disclosure,
-    attestationSummary: JSON.parse(row.attestationSummary) as AttestationSummary,
-    currency: row.currency,
-    periodStart: row.periodStart,
-    periodEnd: row.periodEnd,
-    expiryHours: row.expiryHours as ExpiryOption,
-    createdAt: row.createdAt,
-    expiresAt: row.expiresAt,
-    revokedAt: row.revokedAt,
-  }
-}
-
-export function isExpired(proof: ProofRecord): boolean {
-  return new Date(proof.expiresAt) < new Date()
-}
-
-export function isRevoked(proof: ProofRecord): boolean {
-  return proof.revokedAt !== null
 }

@@ -5,6 +5,12 @@ import Link from 'next/link'
 import type { ProofRecord, AttestationSummary } from '@/lib/proofs/index'
 import type { Disclosure } from '@/lib/claims/index'
 import type { AttestationResult } from '@/lib/near/attest'
+import AppNav from '@/app/components/AppNav'
+import {
+  CheckCircle, XCircle, ShieldCheck, AlertTriangle, Lock,
+  Ban, Clock, HelpCircle, ChevronDown, ChevronUp,
+  RefreshCw, ExternalLink, ArrowRight,
+} from '@/app/components/icons'
 
 interface VerifierProps {
   id: string
@@ -42,7 +48,52 @@ function timeUntil(isoDate: string): string {
   return `${hours}h ${Math.floor((diff % 3_600_000) / 60_000)}m`
 }
 
-const NEAR_AI_SIGNING_INFO = 'https://docs.near.ai/docs/attestation'
+const NEAR_AI_SIGNING_INFO = 'https://docs.near.ai'
+
+const gc: React.CSSProperties = {
+  background: 'rgba(252,249,243,.88)',
+  backdropFilter: 'blur(20px) saturate(130%)',
+  border: '1px solid rgba(255,255,255,.65)',
+  boxShadow: '0 4px 24px -12px rgba(20,16,11,.14), inset 0 1px 0 rgba(255,255,255,.8)',
+  borderRadius: 20,
+}
+
+function StatusPage({ icon, title, message, id }: { icon: React.ReactNode; title: string; message: string; id?: string }) {
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+      <AppNav page="verify" />
+      <div style={{
+        background: 'var(--ink)', color: '#f4ede0',
+        padding: '64px 24px 56px', position: 'relative', overflow: 'hidden',
+        textAlign: 'center',
+      }}>
+        <div aria-hidden style={{ position:'absolute',inset:0,pointerEvents:'none', background:'radial-gradient(ellipse 60% 80% at 50% 50%, rgba(20,72,232,.12) 0%, transparent 65%)' }} />
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24, color: 'rgba(244,237,224,.35)' }}>
+            {icon}
+          </div>
+          <h1 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 400, letterSpacing: '-.04em', lineHeight: .95, marginBottom: 12 }}>
+            {title}
+          </h1>
+          <p style={{ fontSize: 15, color: 'rgba(244,237,224,.55)', lineHeight: 1.6, marginBottom: id ? 16 : 32, maxWidth: 360, margin: id ? '0 auto 16px' : '0 auto 32px' }}>
+            {message}
+          </p>
+          {id && (
+            <p style={{ fontSize: 11, color: 'rgba(244,237,224,.3)', fontFamily: 'monospace', wordBreak: 'break-all', marginBottom: 32 }}>{id}</p>
+          )}
+          <Link href="/prove" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'var(--blue)', color: '#fff',
+            padding: '12px 24px', borderRadius: 999, fontSize: 13, fontWeight: 500,
+            boxShadow: '0 8px 24px -10px rgba(20,72,232,.5)',
+          }}>
+            Create a proof <ArrowRight size={11} />
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function VerifierClient({ id, initialData, initialStatus }: VerifierProps) {
   const [status] = useState(initialStatus)
@@ -59,13 +110,11 @@ export default function VerifierClient({ id, initialData, initialStatus }: Verif
   }, [])
 
   const handleReVerify = async () => {
-    setReVerifying(true)
-    setReVerifyError(null)
+    setReVerifying(true); setReVerifyError(null)
     try {
       const res = await fetch(`/api/attest/live`)
       if (!res.ok) throw new Error(await res.text())
-      const result = await res.json() as AttestationResult
-      setFreshAttestation(result)
+      setFreshAttestation(await res.json() as AttestationResult)
     } catch (e) {
       setReVerifyError(e instanceof Error ? e.message : 'Verification failed')
     } finally {
@@ -74,41 +123,29 @@ export default function VerifierClient({ id, initialData, initialStatus }: Verif
   }
 
   if (status === 410 && (data as { reason?: string }).reason === 'revoked') {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="max-w-lg w-full bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center" role="main">
-          <div className="text-5xl mb-4" aria-hidden>🚫</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Proof Revoked</h1>
-          <p className="text-gray-600">The person who created this proof has revoked it. No verdict is available.</p>
-          <p className="mt-4 text-xs text-gray-500 font-mono break-all">{id}</p>
-        </div>
-      </main>
-    )
+    return <StatusPage
+      icon={<Ban size={56} />}
+      title="Proof Revoked"
+      message="The person who created this proof has revoked it. No verdict is available."
+      id={id}
+    />
   }
 
   if (status === 410 && (data as { reason?: string }).reason === 'expired') {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="max-w-lg w-full bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center" role="main">
-          <div className="text-5xl mb-4" aria-hidden>⏰</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Proof Expired</h1>
-          <p className="text-gray-600">This proof link has expired. Ask the sender to create a new one.</p>
-          <p className="mt-4 text-xs text-gray-500 font-mono break-all">{id}</p>
-        </div>
-      </main>
-    )
+    return <StatusPage
+      icon={<Clock size={56} />}
+      title="Proof Expired"
+      message="This proof link has expired. Ask the sender to create a new one."
+      id={id}
+    />
   }
 
   if (status !== 200) {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="max-w-lg w-full bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center" role="main">
-          <div className="text-5xl mb-4" aria-hidden>❓</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Proof Not Found</h1>
-          <p className="text-gray-600">This link is invalid or the proof no longer exists.</p>
-        </div>
-      </main>
-    )
+    return <StatusPage
+      icon={<HelpCircle size={56} />}
+      title="Proof Not Found"
+      message="This link is invalid or the proof no longer exists."
+    />
   }
 
   const proof = data as ProofData
@@ -135,188 +172,241 @@ export default function VerifierClient({ id, initialData, initialStatus }: Verif
         : []
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4" role="main">
-      <div className="max-w-2xl mx-auto space-y-6">
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <AppNav page="verify" />
 
-        {/* Nav crumb */}
-        <div className="text-sm text-gray-500">
-          <Link href="/" className="hover:text-gray-700 transition-colors">Vouch</Link>
-          <span className="mx-2">›</span>
-          <span>Verify proof</span>
-        </div>
-
-        {/* Verdict card */}
-        <section
-          aria-label="Verdict"
-          className={`rounded-2xl shadow-sm border-2 p-8 text-center ${
-            proof.verdict
-              ? 'bg-green-50 border-green-300'
-              : 'bg-red-50 border-red-300'
-          }`}
-        >
-          <div className="text-6xl mb-3" aria-hidden>{proof.verdict ? '✅' : '❌'}</div>
-          <h1 className="text-3xl font-bold mb-2 text-gray-900">
-            {proof.verdict ? 'Claim Verified' : 'Claim Not Met'}
-          </h1>
-          <p className="text-lg text-gray-700 font-medium">
-            {claimLabel(proof.claimType, proof.disclosure)}
-          </p>
-          <p className="mt-3 text-sm text-gray-500">
-            Period: {proof.periodStart} → {proof.periodEnd} · Currency: {proof.currency}
-          </p>
-          <p className="mt-1 text-xs text-gray-600">
-            Expires in {timeUntil(proof.expiresAt)} · Created {new Date(proof.createdAt).toLocaleDateString()}
-          </p>
-        </section>
-
-        {/* What you learned */}
-        <section aria-label="Claim details" className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Claim details</h2>
-          <dl className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Claim type</dt>
-              <dd className="font-medium text-gray-900 capitalize">{proof.claimType.replace(/_/g, ' ')}</dd>
+      {/* Verdict hero */}
+      <div style={{
+        background: proof.verdict ? 'linear-gradient(145deg,#0d1f0f,#0a1a0d)' : 'linear-gradient(145deg,#1a0c0c,#160a0a)',
+        color: '#f4ede0', padding: '52px 24px 48px', position: 'relative', overflow: 'hidden',
+      }}>
+        <div aria-hidden style={{ position:'absolute',inset:0,pointerEvents:'none',
+          background: proof.verdict
+            ? 'radial-gradient(ellipse 70% 90% at 25% 50%, rgba(10,158,114,.22) 0%, transparent 60%)'
+            : 'radial-gradient(ellipse 70% 90% at 25% 50%, rgba(220,38,38,.18) 0%, transparent 60%)',
+        }} />
+        <div aria-hidden style={{ position:'absolute',bottom:0,right:-40,width:300,height:300,pointerEvents:'none',
+          background: proof.verdict
+            ? 'radial-gradient(circle,rgba(10,158,114,.08) 0%,transparent 65%)'
+            : 'radial-gradient(circle,rgba(220,38,38,.06) 0%,transparent 65%)',
+        }} />
+        <div style={{ maxWidth: 920, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap' }}>
+            <div className="verdict-icon" style={{ color: proof.verdict ? '#4de6a8' : '#f87171', flexShrink: 0 }}>
+              {proof.verdict ? <CheckCircle size={56} /> : <XCircle size={56} />}
             </div>
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Verdict</dt>
-              <dd className={`font-bold ${proof.verdict ? 'text-green-700' : 'text-red-700'}`}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                display: 'inline-block', marginBottom: 10,
+                padding: '4px 14px', borderRadius: 999, fontSize: 12, fontWeight: 700, letterSpacing: '.1em',
+                background: proof.verdict ? 'rgba(10,158,114,.25)' : 'rgba(220,38,38,.25)',
+                color: proof.verdict ? '#4de6a8' : '#f87171',
+                border: `1px solid ${proof.verdict ? 'rgba(10,158,114,.4)' : 'rgba(220,38,38,.4)'}`,
+              }}>
                 {proof.verdict ? 'PASS' : 'FAIL'}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Period covered</dt>
-              <dd className="font-medium text-gray-900">{proof.periodStart} → {proof.periodEnd}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Currency</dt>
-              <dd className="font-medium text-gray-900">{proof.currency}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Threshold</dt>
-              <dd className="font-medium text-gray-900 text-right max-w-xs">{claimLabel(proof.claimType, proof.disclosure)}</dd>
-            </div>
-          </dl>
-        </section>
-
-        {/* What they did NOT see */}
-        <section aria-label="Privacy guarantee" className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Privacy guarantee</h2>
-          <ul className="space-y-2 text-sm text-gray-700" role="list">
-            {[
-              'The original bank statements or PDF files',
-              'Individual transaction descriptions or amounts',
-              'Account numbers or bank details',
-              'Any balance other than pass/fail against the threshold',
-              'The exact income, only whether it met the minimum',
-            ].map((item) => (
-              <li key={item} className="flex gap-2">
-                <span className="text-blue-500 shrink-0" aria-hidden>🔒</span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* Attestation panel — plain-English first */}
-        <section aria-label="Attestation" className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-
-          {/* Plain-English header */}
-          <div className={`p-6 ${attestPassed ? 'bg-green-50' : 'bg-red-50'}`}>
-            <div className="flex items-start gap-4">
-              <div className="text-4xl shrink-0" aria-hidden>{attestPassed ? '🛡️' : '⚠️'}</div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-lg font-bold text-gray-900">
-                    {attestPassed ? 'Computation verified by hardware' : 'Attestation check failed'}
-                  </h2>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    attestPassed ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
-                  }`}>
-                    {attestPassed ? `${checksPassed}/${checksCount} ✓` : `${checksPassed}/${checksCount}`}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  This verdict was computed inside an <strong>Intel TDX Trusted Execution Environment</strong> hosted
-                  by NEAR AI Cloud. The TEE is a sealed compartment in the processor chip — even Vouch&apos;s own
-                  servers cannot access its memory or change its output. The chip signs the result with a
-                  private key that never leaves the hardware.
-                </p>
+              </div>
+              <h1 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 400, letterSpacing: '-.04em', lineHeight: .95, marginBottom: 10 }}>
+                {proof.verdict ? 'Claim verified' : 'Claim not met'}
+              </h1>
+              <p style={{ fontSize: 15, color: 'rgba(244,237,224,.65)', fontWeight: 400, lineHeight: 1.5, maxWidth: 440, marginBottom: 10 }}>
+                {claimLabel(proof.claimType, proof.disclosure)}
+              </p>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12.5, color: 'rgba(244,237,224,.4)' }}>
+                  Period: {proof.periodStart} → {proof.periodEnd}
+                </span>
+                <span style={{ fontSize: 12.5, color: 'rgba(244,237,224,.4)' }}>
+                  Expires in {timeUntil(proof.expiresAt)}
+                </span>
+                <span style={{ fontSize: 12.5, color: 'rgba(244,237,224,.4)' }}>
+                  Created {new Date(proof.createdAt).toLocaleDateString()}
+                </span>
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Re-verify + independent check */}
-          <div className="p-6 border-t border-gray-100 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                onClick={handleReVerify}
-                disabled={reVerifying}
-                aria-busy={reVerifying}
-                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                {reVerifying ? 'Verifying…' : 'Re-verify (fresh nonce)'}
-              </button>
-              <a
-                href={NEAR_AI_SIGNING_INFO}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2.5 border border-gray-300 hover:border-gray-400 text-gray-700 text-sm font-medium rounded-lg text-center transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
-              >
-                Verify independently on NEAR ↗
-              </a>
+      {/* Content */}
+      <main style={{ maxWidth: 920, margin: '0 auto', padding: '24px 24px 64px' }} role="main">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+          {/* Claim details */}
+          <section aria-label="Claim details" style={{ ...gc, padding: '22px' }}>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-2)', marginBottom: 16 }}>Claim details</p>
+            <dl style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                { label: 'Claim type', value: proof.claimType.replace(/_/g, ' '), capitalize: true },
+                { label: 'Verdict', value: proof.verdict ? 'PASS' : 'FAIL', verdictStyle: true },
+                { label: 'Period covered', value: `${proof.periodStart} → ${proof.periodEnd}` },
+                { label: 'Currency', value: proof.currency },
+                { label: 'Threshold', value: claimLabel(proof.claimType, proof.disclosure) },
+              ].map(({ label, value, capitalize, verdictStyle }) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
+                  <dt style={{ fontSize: 13, color: 'var(--ink-2)', flexShrink: 0 }}>{label}</dt>
+                  <dd style={{
+                    fontSize: 13, fontWeight: 500, textAlign: 'right',
+                    textTransform: capitalize ? 'capitalize' : undefined,
+                    color: verdictStyle
+                      ? (proof.verdict ? '#0a7855' : '#b91c1c')
+                      : 'var(--ink)',
+                    maxWidth: 300,
+                  }}>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          {/* Privacy guarantee */}
+          <section aria-label="Privacy guarantee" style={{ ...gc, padding: '22px' }}>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-2)', marginBottom: 16 }}>What was not shared</p>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }} role="list">
+              {[
+                'The original bank statements or PDF files',
+                'Individual transaction descriptions or amounts',
+                'Account numbers or bank details',
+                'Any balance other than pass/fail against the threshold',
+                'The exact income, only whether it met the minimum',
+              ].map((item) => (
+                <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ color: 'var(--blue)', flexShrink: 0, marginTop: 1 }}><Lock size={13} /></div>
+                  <span style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.45 }}>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* Attestation */}
+          <section aria-label="Attestation" style={{ ...gc, overflow: 'hidden', padding: 0 }}>
+            {/* Header */}
+            <div style={{
+              padding: '20px 22px',
+              background: attestPassed ? 'rgba(10,158,114,.06)' : 'rgba(220,38,38,.04)',
+              borderBottom: '1px solid rgba(255,255,255,.5)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: 12,
+                  background: attestPassed ? 'rgba(10,158,114,.12)' : 'rgba(220,38,38,.1)',
+                  display: 'grid', placeItems: 'center', flexShrink: 0,
+                  color: attestPassed ? 'var(--green)' : '#dc2626',
+                }}>
+                  {attestPassed ? <ShieldCheck size={20} /> : <AlertTriangle size={20} />}
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
+                      {attestPassed ? 'Computation verified by hardware' : 'Attestation check failed'}
+                    </h2>
+                    <div style={{
+                      padding: '2px 8px', borderRadius: 999,
+                      background: attestPassed ? 'rgba(10,158,114,.12)' : 'rgba(220,38,38,.1)',
+                      color: attestPassed ? '#0a7855' : '#b91c1c',
+                      fontSize: 11, fontWeight: 600,
+                    }}>{checksPassed}/{checksCount}</div>
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.55 }}>
+                    This verdict was computed inside an{' '}
+                    <strong style={{ color: 'var(--ink)' }}>Intel TDX Trusted Execution Environment</strong>{' '}
+                    hosted by NEAR AI Cloud. The chip signs the result — even Vouch&apos;s own servers
+                    cannot access its memory or change its output.
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {reVerifyError && (
-              <p role="alert" className="text-sm text-red-600">{reVerifyError}</p>
-            )}
+            {/* Re-verify */}
+            <div style={{ padding: '16px 22px', borderBottom: '1px solid rgba(20,16,11,.06)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <button
+                  onClick={handleReVerify}
+                  disabled={reVerifying}
+                  aria-busy={reVerifying}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                    padding: '10px 16px',
+                    background: reVerifying ? 'rgba(20,72,232,.35)' : 'var(--blue)',
+                    color: '#fff', borderRadius: 10, fontSize: 13, fontWeight: 500,
+                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                    transition: 'background .2s',
+                  }}
+                >
+                  <RefreshCw size={12} />
+                  {reVerifying ? 'Verifying…' : 'Re-verify (fresh nonce)'}
+                </button>
+                <a
+                  href={NEAR_AI_SIGNING_INFO}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                    padding: '10px 16px',
+                    border: '1px solid rgba(20,16,11,.1)', borderRadius: 10,
+                    fontSize: 13, fontWeight: 500, color: 'var(--ink-2)',
+                    transition: 'border-color .2s, color .2s',
+                  }}
+                >
+                  <ExternalLink size={12} /> Verify on NEAR
+                </a>
+              </div>
+              {reVerifyError && (
+                <p role="alert" style={{ fontSize: 13, color: '#dc2626', marginTop: 10 }}>{reVerifyError}</p>
+              )}
+              {freshAttestation && !reVerifying && (
+                <p role="status" style={{ fontSize: 13, color: 'var(--green)', marginTop: 10 }}>
+                  Fresh attestation confirmed — {freshAttestation.checks.filter(c => c.passed).length}/{freshAttestation.checks.length} checks passed.
+                </p>
+              )}
+            </div>
 
-            {freshAttestation && !reVerifying && (
-              <p role="status" className="text-sm text-green-700">
-                Fresh attestation confirmed — {freshAttestation.checks.filter(c => c.passed).length}/{freshAttestation.checks.length} checks passed.
-              </p>
-            )}
-          </div>
-
-          {/* Collapsible technical details */}
-          <div className="border-t border-gray-100">
+            {/* Technical details accordion */}
             <button
               onClick={() => setShowTechDetails(v => !v)}
-              className="w-full flex items-center justify-between px-6 py-4 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-inset focus:ring-2 focus:ring-gray-300"
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '14px 22px', background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 13, fontWeight: 500, color: 'var(--ink-2)', fontFamily: 'inherit',
+                transition: 'color .2s',
+              }}
               aria-expanded={showTechDetails}
               aria-controls="tech-details"
             >
-              <span className="font-medium">Technical attestation details</span>
-              <span aria-hidden>{showTechDetails ? '▲' : '▼'}</span>
+              <span>Technical attestation details</span>
+              {showTechDetails ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
             </button>
 
             {showTechDetails && (
-              <div id="tech-details" className="px-6 pb-6 space-y-4">
-                <dl className="space-y-2 text-sm">
-                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
-                    <dt className="text-gray-500 shrink-0">TEE signing address</dt>
-                    <dd className="font-mono text-xs text-gray-700 break-all sm:text-right">{signingAddress || '—'}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-gray-500">Nonce (truncated)</dt>
-                    <dd className="font-mono text-xs text-gray-700">{nonce.slice(0, 16)}…</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-gray-500">Timestamp</dt>
-                    <dd className="text-gray-700 text-xs">{new Date(timestamp).toLocaleString()}</dd>
-                  </div>
+              <div id="tech-details" style={{ padding: '0 22px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <dl style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { label: 'TEE signing address', value: signingAddress || '—', mono: true },
+                    { label: 'Nonce (truncated)', value: `${nonce.slice(0, 16)}…`, mono: true },
+                    { label: 'Timestamp', value: new Date(timestamp).toLocaleString(), mono: false },
+                  ].map(({ label, value, mono }) => (
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 13 }}>
+                      <dt style={{ color: 'var(--ink-2)', flexShrink: 0 }}>{label}</dt>
+                      <dd style={{
+                        fontFamily: mono ? 'monospace' : 'inherit',
+                        fontSize: mono ? 11 : 13,
+                        color: 'var(--ink)', textAlign: 'right', wordBreak: 'break-all',
+                      }}>{value}</dd>
+                    </div>
+                  ))}
                 </dl>
 
                 {displayedChecks.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Attestation checks</p>
-                    <ul className="space-y-1 text-xs" role="list" aria-label="Attestation checks">
+                    <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-2)', marginBottom: 10 }}>
+                      Attestation checks
+                    </p>
+                    <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 5 }} role="list" aria-label="Attestation checks">
                       {displayedChecks.map((c) => (
-                        <li key={c.name} className="flex gap-2 items-center">
-                          <span className={c.passed ? 'text-green-600' : 'text-red-500'} aria-hidden>
+                        <li key={c.name} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12 }}>
+                          <span style={{ color: c.passed ? 'var(--green)' : '#dc2626', fontWeight: 700, flexShrink: 0 }} aria-hidden>
                             {c.passed ? '✓' : '✗'}
                           </span>
-                          <span className="font-mono text-gray-600">{c.name}</span>
-                          {c.detail && <span className="text-gray-400">{c.detail}</span>}
+                          <span style={{ fontFamily: 'monospace', color: 'var(--ink-2)', fontSize: 11 }}>{c.name}</span>
+                          {c.detail && <span style={{ color: 'var(--ink-2)', opacity: .6 }}>{c.detail}</span>}
                         </li>
                       ))}
                     </ul>
@@ -324,13 +414,13 @@ export default function VerifierClient({ id, initialData, initialStatus }: Verif
                 )}
               </div>
             )}
-          </div>
-        </section>
+          </section>
 
-        <p className="text-center text-xs text-gray-500 pb-4">
-          Proof ID: <span className="font-mono">{id}</span>
-        </p>
-      </div>
-    </main>
+          <p style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--ink-2)' }}>
+            Proof ID: <span style={{ fontFamily: 'monospace' }}>{id}</span>
+          </p>
+        </div>
+      </main>
+    </div>
   )
 }

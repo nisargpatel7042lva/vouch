@@ -17,8 +17,10 @@
     "claim": "tsx -r dotenv/config scripts/claim.ts"
   },
   "dependencies": {
+    "@vercel/kv": "^3.0.0",
     "better-sqlite3": "^11.5.0",
     "dotenv": "^16.4.5",
+    "lenis": "^1.3.27",
     "next": "^15.0.4",
     "openai": "^4.73.0",
     "pdf-parse": "^1.1.1",
