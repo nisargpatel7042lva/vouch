@@ -85,14 +85,17 @@ export function buildAuditReport(
   // Anomaly detection
   const anomalies: AnomalyFlag[] = []
 
-  // 1. Large single transactions (> 3x median expense)
+  // 1. Large single transactions (> 5x median expense, one flag per unique description)
   const expenses = transactions.filter(t => t.label === 'expense' && t.amount < 0)
   if (expenses.length >= 3) {
     const sorted = expenses.map(t => Math.abs(t.amount)).sort((a, b) => a - b)
     const median = sorted[Math.floor(sorted.length / 2)]
-    const threshold = median * 3
+    const threshold = median * 5
+    const flaggedDescs = new Set<string>()
     for (const tx of expenses) {
-      if (Math.abs(tx.amount) > threshold && Math.abs(tx.amount) > 100) {
+      const descKey = tx.description.toLowerCase().trim().slice(0, 40)
+      if (Math.abs(tx.amount) > threshold && Math.abs(tx.amount) > 100 && !flaggedDescs.has(descKey)) {
+        flaggedDescs.add(descKey)
         anomalies.push({
           type: 'large_transaction',
           severity: 'warn',
@@ -121,18 +124,20 @@ export function buildAuditReport(
     }
   }
 
-  // 3. Duplicate descriptions (possible duplicate charges)
-  const descCount = new Map<string, number>()
+  // 3. Same-day duplicate charges (same description + same date = likely actual duplicate)
+  const sameDayKey = new Map<string, number>()
   for (const tx of transactions.filter(t => t.label === 'expense')) {
-    const key = tx.description.toLowerCase().trim().slice(0, 40)
-    descCount.set(key, (descCount.get(key) ?? 0) + 1)
+    const key = `${tx.date}|${tx.description.toLowerCase().trim().slice(0, 40)}`
+    sameDayKey.set(key, (sameDayKey.get(key) ?? 0) + 1)
   }
-  for (const [desc, count] of descCount) {
-    if (count >= 3) {
+  for (const [key, count] of sameDayKey) {
+    if (count >= 2) {
+      const [date, desc] = key.split('|')
       anomalies.push({
         type: 'duplicate_description',
-        severity: 'info',
-        message: `"${desc}" appears ${count} times — possible recurring charge or duplicate`,
+        severity: 'warn',
+        message: `"${desc}" charged ${count}× on ${date} — possible duplicate transaction`,
+        txDate: date,
       })
     }
   }

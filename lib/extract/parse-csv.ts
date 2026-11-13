@@ -107,8 +107,10 @@ function splitCsvLine(line: string): string[] {
 
 function parseAmount(raw: string): number {
   if (!raw) return 0
+  // Normalise em-dash (U+2212) and en-dash to hyphen-minus before stripping
+  const normalised = raw.replace(/[−–]/g, '-')
   // Remove currency symbols, commas, parens (accounting negatives)
-  const clean = raw.replace(/[^0-9.\-+]/g, '')
+  const clean = normalised.replace(/[^0-9.\-+]/g, '')
   const hasParens = raw.includes('(') && raw.includes(')')
   const val = parseFloat(clean) || 0
   return hasParens ? -Math.abs(val) : val
