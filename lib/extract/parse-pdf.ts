@@ -11,8 +11,8 @@ import { normaliseDate } from './parse-csv'
 const DATE_RE =
   /\b(\d{4}[-/]\d{2}[-/]\d{2}|\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\d{1,2}[ -][A-Za-z]{3}[ -]\d{4})\b/
 
-// Matches currency-prefixed or plain decimal amounts, including negatives
-const AMOUNT_RE = /(?:^|[\s,(])(-?(?:[A-Z]{0,3}\s*)?[\d,]+\.?\d{0,2})(?=[\s,)$]|$)/g
+// Matches currency-prefixed or plain decimal amounts, including negatives and Unicode symbols
+const AMOUNT_RE = /(?:^|[\s,(])(-?(?:[A-Z]{0,3}|[£€₹$¥₩])\s*[\d,]+\.?\d{0,2})(?=[\s,)$€£₹¥₩]|$)/g
 
 // Matches a whole line that is likely a header or section title
 const SKIP_RE =
@@ -23,7 +23,8 @@ function extractAmounts(line: string): number[] {
   AMOUNT_RE.lastIndex = 0
   let m: RegExpExecArray | null
   while ((m = AMOUNT_RE.exec(line)) !== null) {
-    const raw = m[1].replace(/[^0-9.-]/g, '')
+    // Strip everything except digits, decimal point, minus sign
+    const raw = m[1].replace(/[£€₹$¥₩,\s]/g, '').replace(/[^0-9.-]/g, '')
     const v = parseFloat(raw)
     if (!isNaN(v) && Math.abs(v) >= 0.01) results.push(v)
   }
@@ -34,8 +35,8 @@ function descriptionFrom(line: string, dateStr: string): string {
   // Remove the date, all numbers, currency symbols, and common noise
   return line
     .replace(DATE_RE, '')
-    .replace(/(?:^|[\s,(])-?(?:[A-Z]{0,3}\s*)?[\d,]+\.?\d{0,2}(?=[\s,)$]|$)/g, ' ')
-    .replace(/[$()/\\]/g, ' ')
+    .replace(/(?:^|[\s,(])-?(?:[A-Z]{0,3}|[£€₹$¥₩])\s*[\d,]+\.?\d{0,2}(?=[\s,)$£€₹¥₩]|$)/g, ' ')
+    .replace(/[£€₹$¥₩()/\\]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     || `Transaction on ${dateStr}`
@@ -45,6 +46,11 @@ function detectCurrency(text: string): string {
   if (/\bINR\b|₹|Rs\.?/i.test(text)) return 'INR'
   if (/\bEUR\b|€/.test(text)) return 'EUR'
   if (/\bGBP\b|£/.test(text)) return 'GBP'
+  if (/\bAUD\b|A\$/.test(text)) return 'AUD'
+  if (/\bCAD\b|C\$/.test(text)) return 'CAD'
+  if (/\bJPY\b|¥/.test(text)) return 'JPY'
+  if (/\bAED\b/.test(text)) return 'AED'
+  if (/\bSGD\b|S\$/.test(text)) return 'SGD'
   return 'USD'
 }
 

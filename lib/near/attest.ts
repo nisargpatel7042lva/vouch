@@ -105,6 +105,34 @@ export function verifyReport(report: unknown, nonce: string): AttestationResult 
     composeOk ? `app_compose length: ${appCompose.length}` : 'info.tcb_info.app_compose missing'
   ))
 
+  // Check 9: Intel TDX quote binary structure — version must be 4, TEE type must be TDX (0x81)
+  let quoteStructOk = false
+  let quoteStructDetail = 'could not decode intel_quote as base64'
+  if (quoteOk) {
+    try {
+      const buf = Buffer.from(ga.intel_quote, 'base64')
+      const version = buf.readUInt16LE(0)        // bytes 0–1: quote version
+      const teeTypeByte = buf.readUInt8(4)        // bytes 4–7: TEE type; 0x81 = TDX
+      const minSize = buf.length > 500
+      quoteStructOk = version === 4 && teeTypeByte === 0x81 && minSize
+      quoteStructDetail = quoteStructOk
+        ? `TDX quote v${version}, tee_type=0x${teeTypeByte.toString(16)}, ${buf.length} bytes`
+        : `unexpected format: v=${version} tee=0x${teeTypeByte.toString(16)} len=${buf.length}`
+    } catch {
+      quoteStructDetail = 'base64 decode failed'
+    }
+  }
+  checks.push(chk('intel_quote_tdx_structure', quoteStructOk, quoteStructDetail))
+
+  // Check 10: report_data is 64-byte hex (binds the ECDSA signing key to the hardware measurement)
+  const rdHex = ga.report_data
+  const rdFormatOk = typeof rdHex === 'string' && /^[0-9a-fA-F]{128}$/.test(rdHex)
+  checks.push(chk('report_data_64_bytes', rdFormatOk,
+    rdFormatOk
+      ? `report_data: ${rdHex.slice(0, 16)}…${rdHex.slice(-8)} (64 bytes)`
+      : `report_data format invalid (got ${typeof rdHex === 'string' ? rdHex.length : 'non-string'} chars, expected 128 hex)`
+  ))
+
   return finalize(checks, nonce, addrOk ? ga.signing_address : '')
 }
 

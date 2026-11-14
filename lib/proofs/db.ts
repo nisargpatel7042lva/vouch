@@ -46,7 +46,9 @@ function migrate(db: Database.Database): void {
       createdAt TEXT NOT NULL,
       expiresAt TEXT NOT NULL,
       revokedAt TEXT,
-      revokeTokenHash TEXT NOT NULL
+      revokeTokenHash TEXT NOT NULL,
+      walletAddress TEXT,
+      walletSignature TEXT
     )
   `)
 }

@@ -23,6 +23,8 @@ export interface ProofRecord {
   createdAt: string
   expiresAt: string
   revokedAt: string | null
+  walletAddress?: string
+  walletSignature?: string
 }
 
 export interface AttestationSummary {
@@ -87,6 +89,18 @@ export async function revokeProof(
     return kvRevokeProof(id, token)
   }
   return revokeProofSqlite(id, token)
+}
+
+export async function bindWallet(
+  id: string,
+  walletAddress: string,
+  walletSignature: string
+): Promise<'ok' | 'not_found' | 'already_bound'> {
+  if (useKv()) {
+    const { kvBindWallet } = await import('./kv-store')
+    return kvBindWallet(id, walletAddress, walletSignature)
+  }
+  return bindWalletSqlite(id, walletAddress, walletSignature)
 }
 
 export function isExpired(proof: ProofRecord): boolean {
@@ -158,6 +172,7 @@ interface DbRow {
   attestationSummary: string; currency: string; periodStart: string
   periodEnd: string; expiryHours: number; createdAt: string; expiresAt: string
   revokedAt: string | null; revokeTokenHash: string
+  walletAddress: string | null; walletSignature: string | null
 }
 
 async function getProofSqlite(id: string): Promise<ProofRecord | null> {
@@ -171,6 +186,8 @@ async function getProofSqlite(id: string): Promise<ProofRecord | null> {
     currency: row.currency, periodStart: row.periodStart, periodEnd: row.periodEnd,
     expiryHours: row.expiryHours as ExpiryOption, createdAt: row.createdAt,
     expiresAt: row.expiresAt, revokedAt: row.revokedAt,
+    ...(row.walletAddress ? { walletAddress: row.walletAddress } : {}),
+    ...(row.walletSignature ? { walletSignature: row.walletSignature } : {}),
   }
 }
 
@@ -187,5 +204,22 @@ async function revokeProofSqlite(
   if (row.revokedAt) return 'already_revoked'
   if (hashToken(token) !== row.revokeTokenHash) return 'wrong_token'
   db.prepare('UPDATE proofs SET revokedAt = ? WHERE id = ?').run(new Date().toISOString(), id)
+  return 'ok'
+}
+
+async function bindWalletSqlite(
+  id: string,
+  walletAddress: string,
+  walletSignature: string
+): Promise<'ok' | 'not_found' | 'already_bound'> {
+  const { getDb } = await import('./db')
+  const db = getDb()
+  const row = db.prepare('SELECT walletAddress FROM proofs WHERE id = ?').get(id) as
+    | { walletAddress: string | null }
+    | undefined
+  if (!row) return 'not_found'
+  if (row.walletAddress) return 'already_bound'
+  db.prepare('UPDATE proofs SET walletAddress = ?, walletSignature = ? WHERE id = ?')
+    .run(walletAddress, walletSignature, id)
   return 'ok'
 }

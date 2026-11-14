@@ -73,6 +73,9 @@ export default function ProveClient() {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [myProofs, setMyProofs] = useState<SavedProof[]>([])
+  const [walletBound, setWalletBound] = useState<string | null>(null)
+  const [walletBinding, setWalletBinding] = useState(false)
+  const [walletError, setWalletError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -134,7 +137,33 @@ export default function ProveClient() {
     setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
 
-  const reset = () => { setStep('upload'); setFile(null); setResult(null); setError(null); setCopied(false) }
+  const handleBindWallet = async () => {
+    if (!result) return
+    setWalletError(null)
+    setWalletBinding(true)
+    try {
+      const eth = (window as Window & { ethereum?: { request: (a: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum
+      if (!eth) throw new Error('No wallet detected. Install MetaMask to bind your identity.')
+      const accounts = await eth.request({ method: 'eth_requestAccounts' }) as string[]
+      const address = accounts[0]
+      const message = `Vouch proof: ${result.id}\nI am the owner of this proof.`
+      const signature = await eth.request({ method: 'personal_sign', params: [message, address] }) as string
+      const res = await fetch(`/api/proofs/${result.id}/bind-wallet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: address, walletSignature: signature }),
+      })
+      const data = await res.json() as { ok?: boolean; walletAddress?: string; error?: string }
+      if (!res.ok) throw new Error(data.error ?? 'Binding failed')
+      setWalletBound(data.walletAddress ?? address)
+    } catch (e) {
+      setWalletError(e instanceof Error ? e.message : 'Wallet binding failed')
+    } finally {
+      setWalletBinding(false)
+    }
+  }
+
+  const reset = () => { setStep('upload'); setFile(null); setResult(null); setError(null); setCopied(false); setWalletBound(null) }
 
   /* ── Processing ── */
   if (step === 'processing') {
@@ -274,6 +303,41 @@ export default function ProveClient() {
             }}>
               {result.revokeToken}
             </code>
+          </section>
+
+          {/* Wallet binding */}
+          <section aria-label="Bind wallet" style={{ ...gc, padding: '20px 22px' }}>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-2)', marginBottom: 6 }}>
+              Link your identity <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, opacity: .6 }}>(optional)</span>
+            </p>
+            <p style={{ fontSize: 12.5, color: 'var(--ink-2)', marginBottom: 14, lineHeight: 1.5 }}>
+              Sign with your Ethereum wallet to prove you generated this proof — not someone else.
+            </p>
+            {walletBound ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: 'rgba(10,158,114,.08)', border: '1px solid rgba(10,158,114,.2)' }}>
+                <span style={{ color: 'var(--green)', fontSize: 16 }}>✓</span>
+                <div>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: '#0a7855', marginBottom: 2 }}>Wallet bound</p>
+                  <code style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--ink-2)' }}>{walletBound}</code>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={handleBindWallet}
+                  disabled={walletBinding}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    background: walletBinding ? 'rgba(20,16,11,.06)' : 'var(--ink)', color: walletBinding ? 'var(--ink-2)' : '#f4ede0',
+                    padding: '10px 20px', borderRadius: 10, fontSize: 13, fontWeight: 500,
+                    border: '1px solid rgba(20,16,11,.1)', cursor: walletBinding ? 'default' : 'pointer',
+                  }}
+                >
+                  {walletBinding ? 'Waiting for wallet…' : '🦊 Sign with wallet'}
+                </button>
+                {walletError && <p style={{ fontSize: 12, color: '#dc2626', marginTop: 8 }}>{walletError}</p>}
+              </>
+            )}
           </section>
 
           {/* My proofs */}

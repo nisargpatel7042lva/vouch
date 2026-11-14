@@ -20,7 +20,7 @@ function hashToken(token: string): string {
 }
 
 interface KvEntry {
-  record: ProofRecord & { revokeTokenHash: string }
+  record: ProofRecord & { revokeTokenHash: string; walletAddress?: string; walletSignature?: string }
 }
 
 // TTL: proof expiry + 7 day buffer so "expired" message still renders after expiry
@@ -86,5 +86,26 @@ export async function kvRevokeProof(
   entry.record.revokedAt = new Date().toISOString()
   // Store without TTL so revoked state is durable
   await kv.set(key(id), entry)
+  return 'ok'
+}
+
+export async function kvBindWallet(
+  id: string,
+  walletAddress: string,
+  walletSignature: string
+): Promise<'ok' | 'not_found' | 'already_bound'> {
+  const entry = await kv.get<KvEntry>(key(id))
+  if (!entry) return 'not_found'
+  if (entry.record.walletAddress) return 'already_bound'
+
+  entry.record.walletAddress = walletAddress
+  entry.record.walletSignature = walletSignature
+  // Preserve remaining TTL via pttl
+  const remainMs = await kv.pttl(key(id))
+  if (remainMs > 0) {
+    await kv.set(key(id), entry, { px: remainMs })
+  } else {
+    await kv.set(key(id), entry)
+  }
   return 'ok'
 }

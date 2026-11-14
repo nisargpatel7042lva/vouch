@@ -1,16 +1,23 @@
 import { describe, it, expect } from 'vitest'
 import { verifyReport, generateNonce } from '../../lib/near/attest'
 
+// Build a structurally valid TDX quote (v4, tee_type=0x81, 600 bytes)
+function makeTdxQuoteB64(): string {
+  const buf = Buffer.alloc(600, 0)
+  buf.writeUInt16LE(4, 0)   // version = 4
+  buf.writeUInt16LE(2, 2)   // att_key_type = ECDSA-256
+  buf.writeUInt8(0x81, 4)   // tee_type = TDX (0x81000000 LE)
+  return buf.toString('base64')
+}
+
 function makeValidReport(nonce: string) {
   return {
     gateway_attestation: {
       request_nonce: nonce,
       signing_address: '0xabcdef1234567890abcdef1234567890abcdef12',
-      intel_quote:
-        'BAAAAAAAAAAHAAAAdQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-        'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      intel_quote: makeTdxQuoteB64(),
       event_log: [{ type: 'EV_EFI_VARIABLE_DRIVER_CONFIG', data: 'abc123' }],
-      report_data: 'deadbeef'.repeat(16),
+      report_data: 'deadbeef'.repeat(16), // 128 hex chars = 64 bytes
       signing_algo: 'ecdsa',
       info: {
         tcb_info: {

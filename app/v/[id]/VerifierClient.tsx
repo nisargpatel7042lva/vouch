@@ -257,6 +257,31 @@ export default function VerifierClient({ id, initialData, initialStatus }: Verif
             </dl>
           </section>
 
+          {/* Wallet identity binding — only shown when present */}
+          {proof.walletAddress && (
+            <section aria-label="Identity binding" style={{ ...gc, padding: '22px', background: 'rgba(240,249,255,.95)', border: '1px solid rgba(20,72,232,.15)' }}>
+              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#1e40af', marginBottom: 10 }}>
+                Identity verified
+              </p>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(20,72,232,.1)', display: 'grid', placeItems: 'center', flexShrink: 0, fontSize: 18 }}>
+                  🦊
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)', marginBottom: 4 }}>
+                    Signed by wallet owner
+                  </p>
+                  <code style={{ fontSize: 11.5, fontFamily: 'monospace', color: '#1e40af', wordBreak: 'break-all' }}>
+                    {proof.walletAddress}
+                  </code>
+                  <p style={{ fontSize: 11.5, color: 'var(--ink-2)', marginTop: 6, lineHeight: 1.45 }}>
+                    The owner of this address signed a message proving they created this proof. The signature is verified on the server.
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Integrity flags — only shown when present */}
           {proof.disclosure.integrityFlags && proof.disclosure.integrityFlags.length > 0 && (
             <section aria-label="Document integrity" style={{ ...gc, padding: '22px', borderLeft: '3px solid rgba(234,179,8,.5)' }}>
