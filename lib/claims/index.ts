@@ -59,8 +59,9 @@ export class ClaimError extends Error {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function incomeTransactions(txns: Transaction[]): Transaction[] {
-  // Self-transfers and refunds are excluded from income per spec
-  return txns.filter((t) => t.label === 'income')
+  // Self-transfers and refunds are excluded from income per spec.
+  // Only count positive-amount entries — negative values are parsing artifacts in some CSV formats.
+  return txns.filter((t) => t.label === 'income' && t.amount > 0)
 }
 
 function yearMonth(date: string): string {
