@@ -142,12 +142,14 @@ export default function ProveClient() {
     setWalletError(null)
     setWalletBinding(true)
     try {
-      const eth = (window as Window & { ethereum?: { request: (a: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum
-      if (!eth) throw new Error('No wallet detected. Install MetaMask to bind your identity.')
-      const accounts = await eth.request({ method: 'eth_requestAccounts' }) as string[]
-      const address = accounts[0]
+      const win = window as Window & { ethereum?: unknown }
+      if (!win.ethereum) throw new Error('No wallet detected. Install MetaMask to bind your identity.')
+      const { BrowserProvider } = await import('ethers')
+      const provider = new BrowserProvider(win.ethereum as ConstructorParameters<typeof BrowserProvider>[0])
+      const signer = await provider.getSigner()
+      const address = await signer.getAddress()
       const message = `Vouch proof: ${result.id}\nI am the owner of this proof.`
-      const signature = await eth.request({ method: 'personal_sign', params: [message, address] }) as string
+      const signature = await signer.signMessage(message)
       const res = await fetch(`/api/proofs/${result.id}/bind-wallet`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
