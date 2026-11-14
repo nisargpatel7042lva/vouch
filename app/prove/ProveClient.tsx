@@ -147,7 +147,10 @@ export default function ProveClient() {
       const accounts = await eth.request({ method: 'eth_requestAccounts' }) as string[]
       const address = accounts[0]
       const message = `Vouch proof: ${result.id}\nI am the owner of this proof.`
-      const signature = await eth.request({ method: 'personal_sign', params: [message, address] }) as string
+      // personal_sign expects hex-encoded bytes; plain strings cause mismatch in some wallets
+      const msgBytes = new TextEncoder().encode(message)
+      const hexMessage = '0x' + Array.from(msgBytes, b => b.toString(16).padStart(2, '0')).join('')
+      const signature = await eth.request({ method: 'personal_sign', params: [hexMessage, address] }) as string
       const res = await fetch(`/api/proofs/${result.id}/bind-wallet`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

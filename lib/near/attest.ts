@@ -105,16 +105,17 @@ export function verifyReport(report: unknown, nonce: string): AttestationResult 
     composeOk ? `app_compose length: ${appCompose.length}` : 'info.tcb_info.app_compose missing'
   ))
 
-  // Check 9: Intel TDX quote binary structure — version must be 4, TEE type must be TDX (0x81)
+  // Check 9: Intel TDX quote binary structure — version 4 (TDX 1.0) or 5 (TDX 1.5), TEE type 0x81
   let quoteStructOk = false
   let quoteStructDetail = 'could not decode intel_quote as base64'
   if (quoteOk) {
     try {
       const buf = Buffer.from(ga.intel_quote, 'base64')
       const version = buf.readUInt16LE(0)        // bytes 0–1: quote version
-      const teeTypeByte = buf.readUInt8(4)        // bytes 4–7: TEE type; 0x81 = TDX
+      const teeTypeByte = buf.readUInt8(4)        // bytes 4–7: TEE type LE; 0x81 = TDX
       const minSize = buf.length > 500
-      quoteStructOk = version === 4 && teeTypeByte === 0x81 && minSize
+      // v4 = TDX 1.0, v5 = TDX 1.5 (newer Intel chipsets used by NEAR AI Cloud)
+      quoteStructOk = (version === 4 || version === 5) && teeTypeByte === 0x81 && minSize
       quoteStructDetail = quoteStructOk
         ? `TDX quote v${version}, tee_type=0x${teeTypeByte.toString(16)}, ${buf.length} bytes`
         : `unexpected format: v=${version} tee=0x${teeTypeByte.toString(16)} len=${buf.length}`
@@ -125,12 +126,14 @@ export function verifyReport(report: unknown, nonce: string): AttestationResult 
   checks.push(chk('intel_quote_tdx_structure', quoteStructOk, quoteStructDetail))
 
   // Check 10: report_data is 64-byte hex (binds the ECDSA signing key to the hardware measurement)
-  const rdHex = ga.report_data
-  const rdFormatOk = typeof rdHex === 'string' && /^[0-9a-fA-F]{128}$/.test(rdHex)
+  // Strip optional 0x prefix — some DCAP implementations include it
+  const rdRaw = typeof ga.report_data === 'string' ? ga.report_data : ''
+  const rdHex = rdRaw.startsWith('0x') || rdRaw.startsWith('0X') ? rdRaw.slice(2) : rdRaw
+  const rdFormatOk = rdHex.length === 128 && /^[0-9a-fA-F]{128}$/.test(rdHex)
   checks.push(chk('report_data_64_bytes', rdFormatOk,
     rdFormatOk
       ? `report_data: ${rdHex.slice(0, 16)}…${rdHex.slice(-8)} (64 bytes)`
-      : `report_data format invalid (got ${typeof rdHex === 'string' ? rdHex.length : 'non-string'} chars, expected 128 hex)`
+      : `report_data format invalid (got ${rdRaw.length} chars, expected 128 hex)`
   ))
 
   return finalize(checks, nonce, addrOk ? ga.signing_address : '')

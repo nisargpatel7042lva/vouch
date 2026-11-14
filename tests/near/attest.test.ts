@@ -84,6 +84,41 @@ describe('verifyReport – malformed report', () => {
   })
 })
 
+describe('verifyReport – TDX quote format variants', () => {
+  it('accepts TDX v5 quote (newer Intel chipset)', () => {
+    const nonce = generateNonce()
+    const report = makeValidReport(nonce)
+    const buf = Buffer.alloc(600, 0)
+    buf.writeUInt16LE(5, 0)   // version = 5 (TDX 1.5)
+    buf.writeUInt8(0x81, 4)   // tee_type = TDX
+    report.gateway_attestation.intel_quote = buf.toString('base64')
+    const result = verifyReport(report, nonce)
+    const qCheck = result.checks.find((c) => c.name === 'intel_quote_tdx_structure')
+    expect(qCheck?.passed).toBe(true)
+  })
+
+  it('accepts report_data with 0x prefix', () => {
+    const nonce = generateNonce()
+    const report = makeValidReport(nonce)
+    report.gateway_attestation.report_data = '0x' + 'deadbeef'.repeat(16)
+    const result = verifyReport(report, nonce)
+    const rdCheck = result.checks.find((c) => c.name === 'report_data_64_bytes')
+    expect(rdCheck?.passed).toBe(true)
+  })
+
+  it('rejects TDX quote with wrong version (e.g. v3)', () => {
+    const nonce = generateNonce()
+    const report = makeValidReport(nonce)
+    const buf = Buffer.alloc(600, 0)
+    buf.writeUInt16LE(3, 0)
+    buf.writeUInt8(0x81, 4)
+    report.gateway_attestation.intel_quote = buf.toString('base64')
+    const result = verifyReport(report, nonce)
+    const qCheck = result.checks.find((c) => c.name === 'intel_quote_tdx_structure')
+    expect(qCheck?.passed).toBe(false)
+  })
+})
+
 describe('verifyReport – tampered signature or measurement', () => {
   it('rejects empty intel_quote (tampered/removed TDX measurement)', () => {
     const nonce = generateNonce()
