@@ -22,7 +22,7 @@
 
 ## The problem
 
-Landlords, lenders, and DAOs need to verify financial facts. But handing over a full bank statement exposes everything — every merchant, every subscription, every balance — for a question that only needs a yes or no.
+Landlords, lenders, and DAOs need to verify financial facts. But handing over a full bank statement exposes everything - every merchant, every subscription, every balance - for a question that only needs a yes or no.
 
 Vouch answers that question with a cryptographically attested verdict and nothing more.
 
@@ -34,14 +34,14 @@ Vouch answers that question with a cryptographically attested verdict and nothin
 flowchart LR
     A([Prover uploads\nCSV or PDF]) --> B
 
-    B[Parse transactions\nin memory — Vercel\nnever written to disk] --> C
+    B[Parse transactions\nin memory - Vercel\nnever written to disk] --> C
 
-    subgraph TEE ["NEAR AI Cloud — Intel TDX Enclave"]
+    subgraph TEE ["NEAR AI Cloud - Intel TDX Enclave"]
         C[AI classifies transaction\ndescriptions only\nno amounts · no balances]
         D[Hardware attestation\nproves model ran\nin Intel TDX]
     end
 
-    C --> E[Deterministic claim\nengine — Vercel\ncode computes verdict]
+    C --> E[Deterministic claim\nengine - Vercel\ncode computes verdict]
     D -.->|attests classification\nran in hardware| F
     E --> F([Proof record\nverdict + params only])
     F --> G([Shareable link])
@@ -53,18 +53,18 @@ flowchart LR
 ```
 
 1. **Prover uploads** a CSV or PDF bank statement.
-2. **Vouch server** parses the statement entirely in memory — no data is ever written to disk or logged (P1).
+2. **Vouch server** parses the statement entirely in memory - no data is ever written to disk or logged (P1).
 3. **Transaction descriptions** (not amounts or balances) are sent to NEAR AI Cloud's Intel TDX-hosted model for classification: `income`, `expense`, `self_transfer`, `refund`, or `other`.
-4. **Deterministic code** (not the AI) computes the verdict from the returned labels — amounts and balances never enter the model (P4).
+4. **Deterministic code** (not the AI) computes the verdict from the returned labels - amounts and balances never enter the model (P4).
 5. **NEAR AI Cloud attests** that the classification model ran inside genuine Intel TDX hardware with a verifiable signing key.
-6. **Only the verdict and claim parameters** are stored — raw transactions, exact amounts, and account details are discarded (P2).
+6. **Only the verdict and claim parameters** are stored - raw transactions, exact amounts, and account details are discarded (P2).
 7. **Prover shares a link.** Verifier sees only: verdict, threshold, period, attestation. No amounts, no account numbers, no transactions.
 
 ---
 
 ## Features
 
-### Prover flow — `/prove`
+### Prover flow - `/prove`
 
 Upload a bank statement, configure a claim, and get a shareable link in under 60 seconds. No account required.
 
@@ -76,17 +76,17 @@ Upload a bank statement, configure a claim, and get a shareable link in under 60
 | **Account Balance Floor** | Balance never dropped below X over a rolling window | Never below $1,000 in 30 days |
 | **Financial Runway** | Current balance ÷ avg monthly spend ≥ N months | ≥ 6 months runway |
 
-**Optional:** bind an Ethereum wallet to the proof via EIP-191 `personal_sign` — proves you generated this proof, not someone else.
+**Optional:** bind an Ethereum wallet to the proof via EIP-191 `personal_sign` - proves you generated this proof, not someone else.
 
 ---
 
-### Private Expense Auditor — `/audit`
+### Private Expense Auditor - `/audit`
 
-Ephemeral, zero-storage spending analysis. Upload a statement → instant breakdown of income vs. expenses vs. self-transfers, with anomaly detection. The report is fully in-memory — nothing is persisted.
+Ephemeral, zero-storage spending analysis. Upload a statement → instant breakdown of income vs. expenses vs. self-transfers, with anomaly detection. The report is fully in-memory - nothing is persisted.
 
 ---
 
-### Verifier page — `/v/:id`
+### Verifier page - `/v/:id`
 
 Anyone with the link sees:
 - PASS / FAIL verdict
@@ -106,12 +106,12 @@ flowchart TD
         I1[Full bank statement\nAll transactions · All amounts\nAll merchants · Account numbers]
     end
 
-    subgraph SERVER ["Vouch server — processed in memory, never persisted"]
+    subgraph SERVER ["Vouch server - processed in memory, never persisted"]
         S1[Descriptions sent to\nNEAR AI Cloud TEE]
         S2[Amounts + balances stay here\nused for verdict · then discarded]
     end
 
-    subgraph TEE ["NEAR AI Cloud — Intel TDX"]
+    subgraph TEE ["NEAR AI Cloud - Intel TDX"]
         T1[AI sees descriptions only\nReturns labels: income · expense · other]
         T2[Hardware attestation\nproves this ran in TDX]
     end
@@ -134,19 +134,19 @@ flowchart TD
     style OUTPUT fill:#0a1f0f,color:#86efac,stroke:#14532d
 ```
 
-**Five privacy invariants — enforced in code:**
+**Five privacy invariants - enforced in code:**
 
 | ID | Rule |
 |---|---|
 | **P1** | No raw document data is ever written to disk or logged |
 | **P2** | Only verdict, claim parameters, and attestation summary are persisted |
 | **P3** | All model calls go exclusively to NEAR AI Cloud |
-| **P4** | Code computes all arithmetic and verdicts — the AI model classifies transaction types only |
-| **P5** | Document content is untrusted — instructions embedded in documents are never followed |
+| **P4** | Code computes all arithmetic and verdicts - the AI model classifies transaction types only |
+| **P5** | Document content is untrusted - instructions embedded in documents are never followed |
 
 **What you are trusting:**
 
-- Vouch's open-source server code honours P1 and P2 (auditable — this repository)
+- Vouch's open-source server code honours P1 and P2 (auditable - this repository)
 - NEAR AI Cloud's Intel TDX enclave runs the classification model without exfiltrating descriptions (attested by hardware)
 - The stored verdict cannot be reverse-engineered into the original transactions
 
@@ -165,7 +165,7 @@ GET https://cloud-api.near.ai/v1/attestation/report
 | # | Check | What it verifies |
 |---|---|---|
 | 1 | `gateway_present` | Attestation object exists in the response |
-| 2 | `nonce_echo` | Gateway echoed our nonce — prevents replay attacks |
+| 2 | `nonce_echo` | Gateway echoed our nonce - prevents replay attacks |
 | 3 | `signing_address_present` | TEE ECDSA identity is included |
 | 4 | `intel_quote_present` | Intel TDX hardware quote is non-empty |
 | 5 | `event_log_present` | RTMR3 replay material is present |
@@ -175,7 +175,7 @@ GET https://cloud-api.near.ai/v1/attestation/report
 | 9 | `intel_quote_tdx_structure` | Quote is a valid Intel TDX v4/v5 binary (TEE type `0x81`) |
 | 10 | `report_data_64_bytes` | Report data is exactly 64 hex bytes (key-to-hardware binding) |
 
-The attestation proves that NEAR AI Cloud's model gateway ran inside genuine Intel TDX hardware with the declared software configuration. It covers the classification step — the step where transaction descriptions are processed.
+The attestation proves that NEAR AI Cloud's model gateway ran inside genuine Intel TDX hardware with the declared software configuration. It covers the classification step - the step where transaction descriptions are processed.
 
 Attestation verification is independently documented at [docs.near.ai/cloud/verification](https://docs.near.ai/cloud/verification).
 
@@ -188,10 +188,10 @@ Attestation verification is independently documented at [docs.near.ai/cloud/veri
 | Layer | Technology |
 |---|---|
 | Framework | Next.js 15 App Router + TypeScript |
-| AI / TEE | [NEAR AI Cloud](https://docs.near.ai/cloud/introduction) — `z-ai/glm-5.3-flash` via OpenAI-compatible API |
+| AI / TEE | [NEAR AI Cloud](https://docs.near.ai/cloud/introduction) - `z-ai/glm-5.3-flash` via OpenAI-compatible API |
 | Storage | Vercel KV (Redis) in production · SQLite (`better-sqlite3`) in dev |
 | PDF parsing | `pdf-parse` |
-| Wallet identity | `ethers` v6 — EIP-191 `personal_sign` |
+| Wallet identity | `ethers` v6 - EIP-191 `personal_sign` |
 | Styling | Tailwind CSS v3 |
 | Testing | Vitest (unit) · Playwright (e2e) |
 
@@ -199,11 +199,11 @@ Attestation verification is independently documented at [docs.near.ai/cloud/veri
 
 ## Screenshots
 
-| Prover — Upload | Prover — Configure claim | Prover — Result |
+| Prover - Upload | Prover - Configure claim | Prover - Result |
 |:---:|:---:|:---:|
 | ![Upload](artifacts/prover-upload.png) | ![Claim](artifacts/prover-claim.png) | ![Result](artifacts/prover-result.png) |
 
-| Verifier — Valid proof | Verifier — Revoked | Verifier — Expired |
+| Verifier - Valid proof | Verifier - Revoked | Verifier - Expired |
 |:---:|:---:|:---:|
 | ![Valid](artifacts/verifier-valid.png) | ![Revoked](artifacts/verifier-revoked.png) | ![Expired](artifacts/verifier-expired.png) |
 
@@ -214,7 +214,7 @@ Attestation verification is independently documented at [docs.near.ai/cloud/veri
 ### Prerequisites
 
 - Node.js 18+
-- A NEAR AI Cloud API key — get one free at [cloud.near.ai/signin](https://cloud.near.ai/signin)
+- A NEAR AI Cloud API key - get one free at [cloud.near.ai/signin](https://cloud.near.ai/signin)
 
 ### Setup
 
@@ -234,7 +234,7 @@ cp .env.example .env
 | `NEAR_AI_API_KEY` | **Yes** | NEAR AI Cloud API key |
 | `NEAR_AI_BASE_URL` | No | Override API base (default: `https://cloud-api.near.ai/v1`) |
 | `NEAR_AI_MODEL` | No | Override model (default: `z-ai/glm-5.3-flash`) |
-| `KV_REST_API_URL` | No | Vercel KV URL — switches storage from SQLite to Redis |
+| `KV_REST_API_URL` | No | Vercel KV URL - switches storage from SQLite to Redis |
 | `KV_REST_API_TOKEN` | No | Vercel KV auth token |
 
 ### Run
@@ -251,13 +251,13 @@ Hit **"Try sample data"** on `/prove` to run the full flow without uploading you
 ## Running tests
 
 ```bash
-# Unit tests — 97 tests, no API key needed
+# Unit tests - 97 tests, no API key needed
 npm test
 
 # Watch mode
 npm run test:watch
 
-# Live integration tests — requires NEAR_AI_API_KEY
+# Live integration tests - requires NEAR_AI_API_KEY
 npm run test:live
 
 # End-to-end (requires running dev server)
@@ -271,7 +271,7 @@ npx playwright test
 
 ```
 app/
-├── prove/              Prover flow — upload → claim → generate
+├── prove/              Prover flow - upload → claim → generate
 ├── audit/              Private expense auditor (ephemeral, nothing stored)
 ├── v/[id]/             Verifier page
 ├── my-proofs/          Proof history (localStorage only)
@@ -279,10 +279,10 @@ app/
 └── api/
     ├── proofs/         POST create proof  ·  GET proof by ID
     ├── proofs/[id]/
-    │   ├── bind-wallet/   POST — EIP-191 wallet binding
-    │   └── revoke/        POST — revoke by token
-    ├── audit/          POST — ephemeral audit (zero storage)
-    └── attest/live/    GET — fresh attestation (no claim)
+    │   ├── bind-wallet/   POST - EIP-191 wallet binding
+    │   └── revoke/        POST - revoke by token
+    ├── audit/          POST - ephemeral audit (zero storage)
+    └── attest/live/    GET - fresh attestation (no claim)
 
 lib/
 ├── near/
@@ -298,7 +298,7 @@ lib/
 ├── claims/
 │   └── index.ts        Deterministic claim engine (income · balance · runway)
 ├── proofs/
-│   ├── index.ts        Store router — KV in production, SQLite in dev
+│   ├── index.ts        Store router - KV in production, SQLite in dev
 │   ├── kv-store.ts     Vercel KV implementation
 │   ├── db.ts           SQLite implementation
 │   └── rate-limit.ts   Per-IP rate limiter
@@ -320,11 +320,11 @@ tests/
 
 ### `POST /api/proofs`
 
-**Request** — `multipart/form-data`
+**Request** - `multipart/form-data`
 
 | Field | Type | Description |
 |---|---|---|
-| `file` | File | Bank statement — CSV or PDF, max 10 MB |
+| `file` | File | Bank statement - CSV or PDF, max 10 MB |
 | `claimType` | string | `income_floor` \| `balance_floor` \| `runway_floor` |
 | `params` | JSON | Claim parameters |
 | `expiryHours` | number | `24` \| `168` \| `720` |
@@ -332,13 +332,13 @@ tests/
 **Params by claim type:**
 
 ```jsonc
-// income_floor — income >= threshold every month for N months
+// income_floor - income >= threshold every month for N months
 { "minMonthlyAmount": 3000, "months": 3, "currency": "USD" }
 
-// balance_floor — balance never dropped below threshold in last N days
+// balance_floor - balance never dropped below threshold in last N days
 { "minBalance": 1000, "windowDays": 30, "currency": "USD" }
 
-// runway_floor — balance / avg monthly spend >= N months
+// runway_floor - balance / avg monthly spend >= N months
 { "minMonths": 6, "windowDays": 90, "currency": "USD" }
 ```
 
@@ -355,7 +355,7 @@ tests/
   "expiresAt": "2026-11-21T00:00:00Z",
   "createdAt": "2026-11-14T00:00:00Z",
   "attestationPassed": true,
-  "revokeToken": "..."   // shown once — save it to revoke later
+  "revokeToken": "..."   // shown once - save it to revoke later
 }
 ```
 
@@ -375,7 +375,7 @@ Permanently revoke a proof.
 ```
 
 ### `POST /api/audit`
-Ephemeral expense audit — `multipart/form-data` with a `file` field. Nothing stored.
+Ephemeral expense audit - `multipart/form-data` with a `file` field. Nothing stored.
 
 ---
 
@@ -386,7 +386,7 @@ Full analysis in [`docs/red-team.md`](docs/red-team.md). Seven attack scenarios 
 | Scenario | Mitigation |
 |---|---|
 | **Prompt injection** via transaction descriptions | `[TRANSACTION_START]...[TRANSACTION_END]` delimiters + explicit system prompt fence. Even a successful injection cannot change the verdict (P4: code computes, AI classifies only). |
-| **Fabricated bank statements** | Balance discontinuity, date gaps, and round-amount-bias integrity flags (heuristic — not cryptographic) |
+| **Fabricated bank statements** | Balance discontinuity, date gaps, and round-amount-bias integrity flags (heuristic - not cryptographic) |
 | **Balance stuffing** | AI classifies labels only; deterministic code computes verdict from labels (P4) |
 | **API parameter tampering** | All params validated server-side; verdict derived from raw transactions, not client claims |
 | **Rate limiting** | Per-IP rate limiter on all compute routes |
@@ -397,21 +397,21 @@ Full analysis in [`docs/red-team.md`](docs/red-team.md). Seven attack scenarios 
 
 ## Limitations (v1)
 
-- **Single currency** — multi-currency statements are not supported
-- **Document authenticity** — Vouch proves "the document says X", not "X is true". The integrity flags are heuristic — a crafted CSV can produce a PASS. For guaranteed authenticity, verifiers should request notarised statements from the prover's bank
-- **TEE scope** — the Intel TDX attestation covers the NEAR AI Cloud classification step. The parsing and verdict computation run on Vercel serverless; you are trusting this open-source code
-- **Attestation binding** — the attestation proves the NEAR AI gateway ran in Intel TDX with a given configuration; it does not cryptographically bind to a specific proof ID or verdict
-- **Full DCAP verification** — cryptographic verification of Intel TDX quotes (dcap-qvl) requires native C++ bindings and is roadmap
+- **Single currency** - multi-currency statements are not supported
+- **Document authenticity** - Vouch proves "the document says X", not "X is true". The integrity flags are heuristic - a crafted CSV can produce a PASS. For guaranteed authenticity, verifiers should request notarised statements from the prover's bank
+- **TEE scope** - the Intel TDX attestation covers the NEAR AI Cloud classification step. The parsing and verdict computation run on Vercel serverless; you are trusting this open-source code
+- **Attestation binding** - the attestation proves the NEAR AI gateway ran in Intel TDX with a given configuration; it does not cryptographically bind to a specific proof ID or verdict
+- **Full DCAP verification** - cryptographic verification of Intel TDX quotes (dcap-qvl) requires native C++ bindings and is roadmap
 
 ---
 
-## Built for NEAR Hackathon — Privacy Track
+## Built for NEAR Hackathon - Privacy Track
 
 Most proof-of-income tools ask you to hand over your full bank statement or OAuth into your bank. Vouch asks for neither.
 
-The privacy property Vouch provides: **your raw financial data is never stored**. The AI model that classifies your transactions runs inside NEAR AI Cloud's Intel TDX enclave and receives only description strings — not amounts, not balances. The verdict is computed deterministically by open-source code, then the input is discarded. What lands in the database is a binary verdict and a threshold.
+The privacy property Vouch provides: **your raw financial data is never stored**. The AI model that classifies your transactions runs inside NEAR AI Cloud's Intel TDX enclave and receives only description strings - not amounts, not balances. The verdict is computed deterministically by open-source code, then the input is discarded. What lands in the database is a binary verdict and a threshold.
 
-> *"The verifier learns whether you qualify — nothing about why."*
+> *"The verifier learns whether you qualify - nothing about why."*
 
 **Resources:**
 - [NEAR AI Cloud Docs](https://docs.near.ai/cloud/introduction)
