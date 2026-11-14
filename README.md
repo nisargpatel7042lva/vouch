@@ -16,7 +16,7 @@
 
 <br/>
 
-> Upload a bank statement. Vouch runs the analysis inside a hardware-sealed enclave — your data never leaves the chip. The verifier gets a PASS or FAIL. Nothing else.
+> Upload a bank statement. Vouch classifies your transactions using an AI model running inside a hardware-sealed Intel TDX enclave, computes a deterministic verdict, and returns a shareable proof. The verifier gets a PASS or FAIL. Nothing else.
 
 ---
 
@@ -34,12 +34,15 @@ Vouch answers that question with a cryptographically attested verdict and nothin
 flowchart LR
     A([Prover uploads\nCSV or PDF]) --> B
 
+    B[Parse transactions\nin memory — Vercel\nnever written to disk] --> C
+
     subgraph TEE ["NEAR AI Cloud — Intel TDX Enclave"]
-        B[Parse transactions\nin memory only] --> C[Classify with\nTEE-hosted AI model]
-        C --> D[Deterministic\nclaim engine]
-        D --> E[Intel TDX hardware\nattestation]
+        C[AI classifies transaction\ndescriptions only\nno amounts · no balances]
+        D[Hardware attestation\nproves model ran\nin Intel TDX]
     end
 
+    C --> E[Deterministic claim\nengine — Vercel\ncode computes verdict]
+    D -.->|attests classification\nran in hardware| F
     E --> F([Proof record\nverdict + params only])
     F --> G([Shareable link])
     G --> H([Verifier sees\nPASS / FAIL\nclaim threshold\nTEE attestation])
@@ -50,10 +53,12 @@ flowchart LR
 ```
 
 1. **Prover uploads** a CSV or PDF bank statement.
-2. **NEAR AI Cloud TEE** parses and classifies transactions entirely inside a hardware-sealed Intel TDX enclave — no plaintext ever reaches Vouch's application layer.
-3. **Deterministic code** (not the AI) computes the verdict from classified labels.
-4. **Intel TDX attests** the computation with an unforgeable hardware signature.
-5. **Prover shares a link.** Verifier sees only: verdict, threshold, period, attestation. No amounts, no account numbers, no transactions.
+2. **Vouch server** parses the statement entirely in memory — no data is ever written to disk or logged (P1).
+3. **Transaction descriptions** (not amounts or balances) are sent to NEAR AI Cloud's Intel TDX-hosted model for classification: `income`, `expense`, `self_transfer`, `refund`, or `other`.
+4. **Deterministic code** (not the AI) computes the verdict from the returned labels — amounts and balances never enter the model (P4).
+5. **NEAR AI Cloud attests** that the classification model ran inside genuine Intel TDX hardware with a verifiable signing key.
+6. **Only the verdict and claim parameters** are stored — raw transactions, exact amounts, and account details are discarded (P2).
+7. **Prover shares a link.** Verifier sees only: verdict, threshold, period, attestation. No amounts, no account numbers, no transactions.
 
 ---
 
@@ -98,15 +103,17 @@ Anyone with the link sees:
 ```mermaid
 flowchart TD
     subgraph INPUT ["What you upload"]
-        I1[Full bank statement\nAll transactions\nAll amounts\nAll merchants]
+        I1[Full bank statement\nAll transactions · All amounts\nAll merchants · Account numbers]
     end
 
-    subgraph ENCLAVE ["What stays inside the TEE forever"]
-        E1[Raw transactions]
-        E2[Exact income / balances]
-        E3[Account numbers]
-        E4[Merchant names]
-        E5[Statement file]
+    subgraph SERVER ["Vouch server — processed in memory, never persisted"]
+        S1[Descriptions sent to\nNEAR AI Cloud TEE]
+        S2[Amounts + balances stay here\nused for verdict · then discarded]
+    end
+
+    subgraph TEE ["NEAR AI Cloud — Intel TDX"]
+        T1[AI sees descriptions only\nReturns labels: income · expense · other]
+        T2[Hardware attestation\nproves this ran in TDX]
     end
 
     subgraph OUTPUT ["What the verifier receives"]
@@ -116,15 +123,18 @@ flowchart TD
         O4[TEE attestation]
     end
 
-    INPUT -->|"processed inside\nhardware memory"| ENCLAVE
-    ENCLAVE -->|"only verdict\nescapes"| OUTPUT
+    INPUT --> SERVER
+    SERVER --> TEE
+    TEE --> SERVER
+    SERVER -->|"verdict + params only\nno raw data stored"| OUTPUT
 
     style INPUT fill:#1e3a5f,color:#93c5fd,stroke:none
-    style ENCLAVE fill:#1a0c0c,color:#fca5a5,stroke:#7f1d1d
+    style SERVER fill:#1a1a0c,color:#fde68a,stroke:#78350f
+    style TEE fill:#0a1a0d,color:#4de6a8,stroke:#0a7855
     style OUTPUT fill:#0a1f0f,color:#86efac,stroke:#14532d
 ```
 
-**Five privacy invariants — enforced in code, not policy:**
+**Five privacy invariants — enforced in code:**
 
 | ID | Rule |
 |---|---|
@@ -133,6 +143,12 @@ flowchart TD
 | **P3** | All model calls go exclusively to NEAR AI Cloud |
 | **P4** | Code computes all arithmetic and verdicts — the AI model classifies transaction types only |
 | **P5** | Document content is untrusted — instructions embedded in documents are never followed |
+
+**What you are trusting:**
+
+- Vouch's open-source server code honours P1 and P2 (auditable — this repository)
+- NEAR AI Cloud's Intel TDX enclave runs the classification model without exfiltrating descriptions (attested by hardware)
+- The stored verdict cannot be reverse-engineered into the original transactions
 
 ---
 
@@ -158,6 +174,8 @@ GET https://cloud-api.near.ai/v1/attestation/report
 | 8 | `app_compose_present` | Docker composition hash (MRCONFIGID) is present |
 | 9 | `intel_quote_tdx_structure` | Quote is a valid Intel TDX v4/v5 binary (TEE type `0x81`) |
 | 10 | `report_data_64_bytes` | Report data is exactly 64 hex bytes (key-to-hardware binding) |
+
+The attestation proves that NEAR AI Cloud's model gateway ran inside genuine Intel TDX hardware with the declared software configuration. It covers the classification step — the step where transaction descriptions are processed.
 
 Attestation verification is independently documented at [docs.near.ai/cloud/verification](https://docs.near.ai/cloud/verification).
 
@@ -367,8 +385,8 @@ Full analysis in [`docs/red-team.md`](docs/red-team.md). Seven attack scenarios 
 
 | Scenario | Mitigation |
 |---|---|
-| **Prompt injection** via transaction descriptions | `[TRANSACTION_START]...[TRANSACTION_END]` delimiters + explicit system prompt fence. Even a successful injection cannot change the verdict (P4: code computes, AI never does). |
-| **Fabricated bank statements** | Balance discontinuity, date gaps, and round-amount-bias integrity flags |
+| **Prompt injection** via transaction descriptions | `[TRANSACTION_START]...[TRANSACTION_END]` delimiters + explicit system prompt fence. Even a successful injection cannot change the verdict (P4: code computes, AI classifies only). |
+| **Fabricated bank statements** | Balance discontinuity, date gaps, and round-amount-bias integrity flags (heuristic — not cryptographic) |
 | **Balance stuffing** | AI classifies labels only; deterministic code computes verdict from labels (P4) |
 | **API parameter tampering** | All params validated server-side; verdict derived from raw transactions, not client claims |
 | **Rate limiting** | Per-IP rate limiter on all compute routes |
@@ -380,18 +398,20 @@ Full analysis in [`docs/red-team.md`](docs/red-team.md). Seven attack scenarios 
 ## Limitations (v1)
 
 - **Single currency** — multi-currency statements are not supported
-- **Document authenticity** — Vouch proves "the document says X", not "X is true". For guaranteed authenticity, verifiers should request notarised statements from the prover's bank
-- **Full DCAP verification** — cryptographic verification of Intel TDX quotes (dcap-qvl) is roadmap
+- **Document authenticity** — Vouch proves "the document says X", not "X is true". The integrity flags are heuristic — a crafted CSV can produce a PASS. For guaranteed authenticity, verifiers should request notarised statements from the prover's bank
+- **TEE scope** — the Intel TDX attestation covers the NEAR AI Cloud classification step. The parsing and verdict computation run on Vercel serverless; you are trusting this open-source code
+- **Attestation binding** — the attestation proves the NEAR AI gateway ran in Intel TDX with a given configuration; it does not cryptographically bind to a specific proof ID or verdict
+- **Full DCAP verification** — cryptographic verification of Intel TDX quotes (dcap-qvl) requires native C++ bindings and is roadmap
 
 ---
 
 ## Built for NEAR Hackathon — Privacy Track
 
-Privacy is usually a policy promise. Vouch makes sharing raw financial data **architecturally impossible**.
+Most proof-of-income tools ask you to hand over your full bank statement or OAuth into your bank. Vouch asks for neither.
 
-The statement is processed inside hardware-sealed memory on NEAR AI Cloud. The signing key never leaves the TEE. The only output is a binary verdict and a threshold — structurally incapable of leaking what it was computed from.
+The privacy property Vouch provides: **your raw financial data is never stored**. The AI model that classifies your transactions runs inside NEAR AI Cloud's Intel TDX enclave and receives only description strings — not amounts, not balances. The verdict is computed deterministically by open-source code, then the input is discarded. What lands in the database is a binary verdict and a threshold.
 
-> *"Not hidden by policy — structurally withheld."*
+> *"The verifier learns whether you qualify — nothing about why."*
 
 **Resources:**
 - [NEAR AI Cloud Docs](https://docs.near.ai/cloud/introduction)
