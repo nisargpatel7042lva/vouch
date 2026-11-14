@@ -97,6 +97,19 @@ describe('verifyReport – TDX quote format variants', () => {
     expect(qCheck?.passed).toBe(true)
   })
 
+  it('accepts hex-encoded intel_quote (NEAR AI Cloud format)', () => {
+    const nonce = generateNonce()
+    const report = makeValidReport(nonce)
+    const buf = Buffer.alloc(600, 0)
+    buf.writeUInt16LE(4, 0)
+    buf.writeUInt8(0x81, 4)
+    // NEAR AI returns the quote as a hex string, not base64
+    report.gateway_attestation.intel_quote = buf.toString('hex')
+    const result = verifyReport(report, nonce)
+    const qCheck = result.checks.find((c) => c.name === 'intel_quote_tdx_structure')
+    expect(qCheck?.passed).toBe(true)
+  })
+
   it('accepts report_data with 0x prefix', () => {
     const nonce = generateNonce()
     const report = makeValidReport(nonce)

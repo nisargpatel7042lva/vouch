@@ -106,11 +106,15 @@ export function verifyReport(report: unknown, nonce: string): AttestationResult 
   ))
 
   // Check 9: Intel TDX quote binary structure — version 4 (TDX 1.0) or 5 (TDX 1.5), TEE type 0x81
+  // NEAR AI returns intel_quote as a hex string; some other implementations use base64.
+  // Auto-detect: if the string is all hex chars and even length, decode as hex; else base64.
   let quoteStructOk = false
-  let quoteStructDetail = 'could not decode intel_quote as base64'
+  let quoteStructDetail = 'could not decode intel_quote'
   if (quoteOk) {
     try {
-      const buf = Buffer.from(ga.intel_quote, 'base64')
+      const quoteStr = ga.intel_quote as string
+      const looksHex = quoteStr.length % 2 === 0 && /^[0-9a-fA-F]+$/.test(quoteStr.slice(0, 64))
+      const buf = Buffer.from(quoteStr, looksHex ? 'hex' : 'base64')
       const version = buf.readUInt16LE(0)        // bytes 0–1: quote version
       const teeTypeByte = buf.readUInt8(4)        // bytes 4–7: TEE type LE; 0x81 = TDX
       const minSize = buf.length > 500
@@ -120,7 +124,7 @@ export function verifyReport(report: unknown, nonce: string): AttestationResult 
         ? `TDX quote v${version}, tee_type=0x${teeTypeByte.toString(16)}, ${buf.length} bytes`
         : `unexpected format: v=${version} tee=0x${teeTypeByte.toString(16)} len=${buf.length}`
     } catch {
-      quoteStructDetail = 'base64 decode failed'
+      quoteStructDetail = 'quote decode failed'
     }
   }
   checks.push(chk('intel_quote_tdx_structure', quoteStructOk, quoteStructDetail))
