@@ -71,8 +71,8 @@ export default function AboutClient() {
                 icon: <EyeOff size={20} />,
                 iconColor: 'var(--blue)',
                 iconBg: 'rgba(20,72,232,.1)',
-                title: 'Zero data exposure',
-                body: 'Your bank statement is processed entirely inside a hardware-sealed Trusted Execution Environment. Vouch\'s own servers cannot see your transactions — only the final verdict leaves the enclave.',
+                title: 'No raw data stored',
+                body: 'Your statement is parsed in memory and never written to disk. Transaction descriptions are classified by an AI model inside a hardware-sealed TEE — amounts and balances never enter the model. Only the verdict and threshold are stored.',
               },
               {
                 icon: <ShieldCheck size={20} />,
@@ -134,10 +134,10 @@ export default function AboutClient() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
               {[
-                { step: '01', label: 'Upload statement', detail: 'Sent over TLS directly into the TEE. Never touches Vouch\'s application code.' },
-                { step: '02', label: 'NEAR AI classifies', detail: 'Model runs inside the enclave. Transactions are categorised without leaving hardware memory.' },
-                { step: '03', label: 'Claim checked', detail: 'Arithmetic and threshold logic runs in code — model only classifies, never decides.' },
-                { step: '04', label: 'Chip signs result', detail: 'The Intel TDX chip signs the verdict with a hardware key. The signature is unforgeable.' },
+                { step: '01', label: 'Upload statement', detail: 'Received by Vouch\'s server over TLS and parsed in memory. Never written to disk or logged.' },
+                { step: '02', label: 'NEAR AI classifies', detail: 'Transaction descriptions (not amounts) are sent to a model running inside NEAR AI Cloud\'s Intel TDX enclave for classification.' },
+                { step: '03', label: 'Claim checked', detail: 'Arithmetic and threshold logic run on Vouch\'s server in open-source code. Model only classifies, never decides.' },
+                { step: '04', label: 'TEE attests classification', detail: 'NEAR AI Cloud\'s Intel TDX chip attests that the classification model ran inside hardware-sealed memory.' },
               ].map(({ step, label, detail }) => (
                 <div key={step} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{
@@ -168,10 +168,10 @@ export default function AboutClient() {
               </h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
                 {[
-                  'Store your bank statement or any transactions',
+                  'Store your bank statement or raw transactions',
                   'Log amounts, descriptions, or account details',
+                  'Send amounts or balances to any AI model',
                   'Share your data with third parties',
-                  'Allow our servers to see inside the TEE',
                   'Follow instructions embedded in documents',
                   'Use your data to train any model',
                 ].map((item) => (

@@ -35,15 +35,11 @@ describe('P5 prompt injection defence', () => {
   })
 
   it('classifyBatch user content wraps descriptions in [TRANSACTION_START/END] delimiters', () => {
-    // Verify the prompt construction isolates descriptions from instructions
     const rows = parseCsv(loadFixture('adversarial-injection.csv'))
-    // Simulate what classifyTransactions does to build the prompt
+    // Mirror the exact format used in classify.ts — description only, no amounts or currency
     const items = rows
       .slice(0, 3)
-      .map(
-        (r, i) =>
-          `${i + 1}. [TRANSACTION_START] ${r.date} | ${r.description} | ${r.amount} ${r.currency} [TRANSACTION_END]`
-      )
+      .map((r, i) => `${i + 1}. [TRANSACTION_START] ${r.description} [TRANSACTION_END]`)
       .join('\n')
 
     // Each description is sandwiched between delimiters
@@ -51,6 +47,28 @@ describe('P5 prompt injection defence', () => {
       const escaped = row.description.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       const pattern = new RegExp(`\\[TRANSACTION_START\\][\\s\\S]*?${escaped}[\\s\\S]*?\\[TRANSACTION_END\\]`)
       expect(items).toMatch(pattern)
+    }
+  })
+
+  it('API payload does not include transaction amounts or currency strings', () => {
+    const rows = parseCsv(loadFixture('adversarial-injection.csv'))
+    const items = rows
+      .map((r, i) => `${i + 1}. [TRANSACTION_START] ${r.description} [TRANSACTION_END]`)
+      .join('\n')
+    const userContent = `Classify these ${rows.length} transaction descriptions in order:\n\n${items}`
+
+    // No raw numeric amounts should appear (amounts look like -1200.00, +3000, etc.)
+    for (const row of rows) {
+      const amtStr = String(Math.abs(row.amount))
+      // Only flag amounts that are non-trivial (avoid false positives on e.g. index "1.")
+      if (Math.abs(row.amount) > 9) {
+        expect(userContent).not.toContain(amtStr)
+      }
+    }
+    // Currency code must not appear as a standalone token
+    for (const row of rows) {
+      const currencyPattern = new RegExp(`\\b${row.currency}\\b`)
+      expect(userContent).not.toMatch(currencyPattern)
     }
   })
 })

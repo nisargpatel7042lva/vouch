@@ -351,7 +351,7 @@ export default function VerifierClient({ id, initialData, initialStatus }: Verif
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
-                      {attestPassed ? 'Computation verified by hardware' : 'Attestation check failed'}
+                      {attestPassed ? 'Classification verified by hardware' : 'Attestation check failed'}
                     </h2>
                     <div style={{
                       padding: '2px 8px', borderRadius: 999,
@@ -361,10 +361,10 @@ export default function VerifierClient({ id, initialData, initialStatus }: Verif
                     }}>{checksPassed}/{checksCount}</div>
                   </div>
                   <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.55 }}>
-                    This verdict was computed inside an{' '}
-                    <strong style={{ color: 'var(--ink)' }}>Intel TDX Trusted Execution Environment</strong>{' '}
-                    hosted by NEAR AI Cloud. The chip signs the result — even Vouch&apos;s own servers
-                    cannot access its memory or change its output.
+                    Transaction descriptions were classified by an AI model running inside{' '}
+                    <strong style={{ color: 'var(--ink)' }}>NEAR AI Cloud&apos;s Intel TDX enclave</strong>.
+                    The verdict was computed deterministically from those labels by open-source code.
+                    Amounts and balances never entered the model.
                   </p>
                 </div>
               </div>
@@ -471,9 +471,12 @@ export default function VerifierClient({ id, initialData, initialStatus }: Verif
             )}
           </section>
 
-          <p style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--ink-2)' }}>
-            Proof ID: <span style={{ fontFamily: 'monospace' }}>{id}</span>
-          </p>
+          <div style={{ background: 'rgba(20,16,11,.03)', border: '1px solid rgba(20,16,11,.07)', borderRadius: 14, padding: '14px 18px' }}>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 6 }}>
+              <strong style={{ color: 'var(--ink)' }}>Document authenticity note:</strong> This proof shows that the uploaded document contained transactions meeting the stated threshold. It does not verify that a bank actually issued the document. For guaranteed authenticity, request a notarised statement directly from the prover&apos;s bank.
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--ink-2)', fontFamily: 'monospace' }}>Proof ID: {id}</p>
+          </div>
         </div>
       </main>
     </div>

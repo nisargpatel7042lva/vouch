@@ -86,11 +86,14 @@ describe('claimIncomeFloor', () => {
     expect(result.verdict).toBe(false)
   })
 
-  it('partial months: uses available months when fewer than requested', () => {
+  it('throws INSUFFICIENT_DATA when fewer months available than requested', () => {
     const txns = months3Income(3000) // 3 months available
-    const result = claimIncomeFloor(txns, { minMonthlyAmount: 3000, months: 6, currency: 'USD' })
-    // Only 3 months in data, verdict based on those 3
-    expect(result.verdict).toBe(true) // 3000 >= 3000 for all 3 available months
+    expect(() =>
+      claimIncomeFloor(txns, { minMonthlyAmount: 3000, months: 6, currency: 'USD' })
+    ).toThrow(ClaimError)
+    expect(() =>
+      claimIncomeFloor(txns, { minMonthlyAmount: 3000, months: 6, currency: 'USD' })
+    ).toThrow('Insufficient data')
   })
 
   it('handles negative balances gracefully', () => {

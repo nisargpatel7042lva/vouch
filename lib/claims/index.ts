@@ -124,8 +124,10 @@ export function claimIncomeFloor(
   const targetMonths = allMonths.slice(-params.months)
 
   if (targetMonths.length < params.months) {
-    // Not enough months — but still compute verdict against available data
-    // (spec: "partial months" edge case — compute with what we have)
+    throw new ClaimError(
+      `Insufficient data: claim requires ${params.months} months but only ${targetMonths.length} month${targetMonths.length !== 1 ? 's' : ''} found in the statement`,
+      'INSUFFICIENT_DATA'
+    )
   }
 
   const verdict = targetMonths.every(

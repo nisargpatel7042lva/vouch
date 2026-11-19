@@ -62,13 +62,12 @@ async function classifyBatch(
   offset: number
 ): Promise<Record<number, TransactionLabel>> {
   // Delimit each transaction — P5 protection against prompt injection in descriptions
+  // Only description strings go to the model — amounts, dates, and currency are withheld (P4/privacy)
   const items = rows
-    .map((r, i) =>
-      `${i + 1}. [TRANSACTION_START] ${r.date} | ${r.description} | ${r.amount >= 0 ? '+' : ''}${r.amount} ${r.currency} [TRANSACTION_END]`
-    )
+    .map((r, i) => `${i + 1}. [TRANSACTION_START] ${r.description} [TRANSACTION_END]`)
     .join('\n')
 
-  const userContent = `Classify these ${rows.length} transactions in order:\n\n${items}`
+  const userContent = `Classify these ${rows.length} transaction descriptions in order:\n\n${items}`
 
   let raw = ''
   for (let attempt = 0; attempt < 2; attempt++) {
