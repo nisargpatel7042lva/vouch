@@ -36,10 +36,13 @@ describe('P5 prompt injection defence', () => {
 
   it('classifyBatch user content wraps descriptions in [TRANSACTION_START/END] delimiters', () => {
     const rows = parseCsv(loadFixture('adversarial-injection.csv'))
-    // Mirror the exact format used in classify.ts — description only, no amounts or currency
+    // Mirror the exact format used in classify.ts — direction + description, no amounts or currency
     const items = rows
       .slice(0, 3)
-      .map((r, i) => `${i + 1}. [TRANSACTION_START] ${r.description} [TRANSACTION_END]`)
+      .map((r, i) => {
+        const direction = r.amount >= 0 ? 'credit' : 'debit'
+        return `${i + 1}. [TRANSACTION_START] ${direction} | ${r.description} [TRANSACTION_END]`
+      })
       .join('\n')
 
     // Each description is sandwiched between delimiters
@@ -53,14 +56,16 @@ describe('P5 prompt injection defence', () => {
   it('API payload does not include transaction amounts or currency strings', () => {
     const rows = parseCsv(loadFixture('adversarial-injection.csv'))
     const items = rows
-      .map((r, i) => `${i + 1}. [TRANSACTION_START] ${r.description} [TRANSACTION_END]`)
+      .map((r, i) => {
+        const direction = r.amount >= 0 ? 'credit' : 'debit'
+        return `${i + 1}. [TRANSACTION_START] ${direction} | ${r.description} [TRANSACTION_END]`
+      })
       .join('\n')
-    const userContent = `Classify these ${rows.length} transaction descriptions in order:\n\n${items}`
+    const userContent = `Classify these ${rows.length} transactions in order:\n\n${items}`
 
-    // No raw numeric amounts should appear (amounts look like -1200.00, +3000, etc.)
+    // No raw numeric amounts should appear
     for (const row of rows) {
       const amtStr = String(Math.abs(row.amount))
-      // Only flag amounts that are non-trivial (avoid false positives on e.g. index "1.")
       if (Math.abs(row.amount) > 9) {
         expect(userContent).not.toContain(amtStr)
       }
@@ -70,5 +75,7 @@ describe('P5 prompt injection defence', () => {
       const currencyPattern = new RegExp(`\\b${row.currency}\\b`)
       expect(userContent).not.toMatch(currencyPattern)
     }
+    // Direction indicators must be present
+    expect(userContent).toMatch(/\b(credit|debit)\b/)
   })
 })

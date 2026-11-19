@@ -77,7 +77,11 @@ export async function POST(req: NextRequest) {
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Internal error'
-    const status = message.includes('Unsupported') || message.includes('empty') ? 400 : 500
-    return NextResponse.json({ error: message }, { status })
+    const isClientError =
+      message.includes('Unsupported') ||
+      message.includes('empty') ||
+      message.includes('Insufficient data') ||
+      message.includes('Multi-currency')
+    return NextResponse.json({ error: message }, { status: isClientError ? 400 : 500 })
   }
 }
